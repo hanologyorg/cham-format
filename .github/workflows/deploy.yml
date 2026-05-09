@@ -23,8 +23,7 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
-      - run: mkdir -p dist
-      - run: bundle exec coradoc convert cham-spec.adoc --from asciidoc --to html -o dist/index.html
+      - run: ruby scripts/build.rb
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

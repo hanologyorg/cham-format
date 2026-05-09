@@ -1,0 +1,157 @@
+[[registries]]
+== Registries
+
+Registries are authoritative YAML files that provide reference data shared across all texts.
+They reside in the `data/` directory.
+
+=== File manifest
+
+[cols="1,1,1"]
+|===
+| File | Purpose | ID format
+
+| `lexicon.yaml`
+| Global pronunciation lexicon
+| Character/word as key
+
+| `authors.yaml`
+| People registry (authors, annotators, translators)
+| `A` + 3 digits (e.g., `A001`)
+
+| `dynasties.yaml`
+| Dynasty registry
+| Dynasty name as key
+
+| `eras.yaml`
+| Era table (652 entries from Chinese national standard)
+| Sequential entries
+
+| `sexagenary.yaml`
+| Sexagenary cycle reference
+| 60 cycle names as keys
+
+| `places.yaml`
+| Place name registry
+| `P` + 3 digits (e.g., `P001`)
+
+| `events.yaml`
+| Historical event registry
+| `E` + digits (e.g., `E001`)
+|===
+
+=== authors.yaml
+
+The authors registry contains all historical figures referenced in the corpus — not limited to authors.
+Commentators, translators, and editors are also included.
+
+[source,yaml]
+----
+A001:
+  name: 項羽
+  dynasty: 秦末
+  bio: 項羽（前232—前202），名籍，字羽，下相人……
+
+A010:
+  name: 王弼
+  dynasty: 三國（魏）
+  bio: 王弼（226—249），字輔嗣，山陽高平人……
+----
+
+ID allocation rules:
+
+* IDs are permanent — once assigned, they *shall not* be changed or reused
+* The `name` field *shall* be in Chinese
+* The `dynasty` field *should* match a key in `dynasties.yaml`
+* The `bio` field is optional free text
+
+=== places.yaml
+
+[source,yaml]
+----
+P001:
+  name: 垓下
+  modern: 今安徽省靈璧縣東南
+  geo: [33.28, 117.55]    # optional: latitude, longitude
+----
+
+=== events.yaml
+
+[source,yaml]
+----
+E001:
+  name: 垓下之戰
+  date: -202
+  description: 楚漢戰爭最後決戰
+----
+
+=== dynasties.yaml
+
+[source,yaml]
+----
+秦:
+  code: QIN
+  start: -221
+  end: -207
+西漢:
+  code: XHAN
+  start: -206
+  end: 8
+唐:
+  code: TANG
+  start: 618
+  end: 907
+----
+
+=== eras.yaml
+
+The era registry contains 652 entries derived from the Chinese national standard GB/T XXXXX Part 2.
+Each entry records:
+
+[source,yaml]
+----
+- dynasty: 漢
+  dynasty_code: HAN
+  ruler: 高祖
+  ruler_code: GZ
+  era: null              # null for pre-era-name periods
+  era_code: null
+  year: 1
+  sexagenary: 乙未
+  iso: -206
+----
+
+=== sexagenary.yaml
+
+[source,yaml]
+----
+stems: [甲, 乙, 丙, 丁, 戊, 己, 庚, 辛, 壬, 癸]
+branches: [子, 醜, 寅, 卯, 辰, 巳, 午, 未, 申, 酉, 戌, 亥]
+甲子: 1
+乙丑: 2
+# ... through 癸亥: 60
+----
+
+=== Date encoding
+
+CHAM supports four Chinese historical date encoding types based on the national standard `h-CN.{type}...` system:
+
+[cols="1,1,2"]
+|===
+| Type | System | Format
+
+| 1
+| Ruler regnal year (王公即位年次)
+| `h-CN.1.{dynasty}.{ruler}.{year}`
+
+| 2
+| Era name year (年號紀年)
+| `h-CN.2.{dynasty}.{era}.{year}`
+
+| 3
+| Republic of China year (中華民國紀年)
+| `h-CN.3.{year}`
+
+| 4
+| Sexagenary cycle (天干地支紀年)
+| `h-CN.4.{cycle}`
+|===

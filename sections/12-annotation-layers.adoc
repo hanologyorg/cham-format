@@ -1,0 +1,77 @@
+
+[[annotation-layers]]
+== Annotation layers
+
+CHAM uses a three-layer annotation architecture to balance global consistency with per-text precision.
+
+=== Three-layer architecture
+
+[cols="1,1,1,3"]
+|===
+| Layer | Source | Scope | Override rule
+
+| 1. Global lexicon
+| `data/lexicon.yaml`
+| All texts
+| Weakest — overridden by layers 2 and 3
+
+| 2. Main file inline
+| `text.cham.md` annotation entries
+| Single piece
+| Overrides layer 1
+
+| 3. Subordinate file
+| `*.cham.md` subordinate files
+| Single piece
+| Overrides layer 1
+|===
+
+=== Override rules
+
+At the same position in the text:
+
+* Inline annotations (layers 2–3) override the global lexicon (layer 1)
+* Different `kind` values do *not* override each other — a `pron` and a `meaning` annotation at the same position coexist
+* Same `kind` at the same position: the more specific source takes precedence
+
+=== Global lexicon format
+
+The global lexicon (`data/lexicon.yaml`) provides pronunciation data for characters and words across all texts.
+It uses the same annotation syntax as inline pronunciation entries.
+
+[source,yaml]
+----
+騅:
+  pron:
+    - type:hom lang:yue [錐]
+    - type:jyut lang:yue [zeoi1]
+    - type:pinyin lang:cmn [zhuī]
+
+行:
+  pron:
+    - type:pinyin lang:cmn [xíng]
+    - type:pinyin lang:cmn [háng]
+
+樂:
+  pron:
+    - type:hom lang:yue [落]
+    - type:jyut lang:yue [lok6]
+    - type:pinyin lang:cmn [lè]
+    - type:pinyin lang:cmn [yuè]
+----
+
+=== Multi-sound character handling
+
+The global lexicon lists all known readings for a character.
+The *first* reading for each type is the *default reading*.
+When a text uses a non-default reading, an inline `pron` annotation in the CHAM file overrides the default.
+
+Parsers *shall* apply the global lexicon as follows:
+
+. Load the lexicon from `data/lexicon.yaml`
+. Scan the clean text for characters/words matching lexicon entries
+. For each match, create a pronunciation annotation using the default reading
+. If an inline `pron` annotation exists at the same position, the inline annotation takes precedence
+
+NOTE: The global lexicon currently supports only `pron` annotations. Semantic annotations are always position-specific and must be provided inline.
+

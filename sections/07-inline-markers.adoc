@@ -1,0 +1,92 @@
+[[inline-markers]]
+== Inline markers
+
+Inline markers are zero-width annotations embedded in the text content.
+They define character ranges that annotation entries can reference.
+
+=== Syntax
+
+[cols="1,1"]
+|===
+| Marker | Description
+
+| `{N}`
+| Opening marker — marks the start of a range. Zero-width.
+
+| `{/N}`
+| Closing marker — marks the end of a range. Zero-width.
+|===
+
+Where `N` is a positive integer (1, 2, 3, ...).
+Multi-digit IDs are supported (e.g., `{12}`, `{/12}`).
+
+=== Characteristics
+
+==== Zero-width
+
+Markers do not wrap text. They are inserted at specific positions.
+Removing all markers yields the plain text:
+
+[source]
+----
+時不利兮{1}騅{/1}不逝。
+→ 時不利兮騅不逝。
+----
+
+==== Overlapping ranges
+
+Markers support overlapping ranges:
+
+[source]
+----
+{1}力拔{2}山兮{/1}氣蓋{/2}世。
+Range 1: 力拔山兮
+Range 2: 山兮氣蓋 (overlap: 山兮)
+----
+
+==== Enclosed ranges
+
+A range may be fully enclosed within another:
+
+[source]
+----
+{1}奈{2}若何{/2}{/1}！
+Range 1: 奈若何
+Range 2: 若何 (enclosed in Range 1)
+----
+
+==== Disallowed patterns
+
+Markers *shall not* produce syntax ambiguity.
+An opening marker *shall not* be closed by a different marker's closing tag when that would leave the first marker unclosed:
+
+* `{1}{2}{/1}{/2}` — allowed (properly interleaved)
+* `{1}{2}{/1}` — disallowed (marker 2 is unclosed)
+
+==== Uniqueness
+
+Each marker ID `N` *shall* be unique within a single CHAM file.
+The same ID may appear as both an opening and closing pair, but no two opening markers may share the same ID.
+
+=== Offset calculation
+
+Character offsets are calculated on the merged text block string after removing all marker syntax:
+
+* Offsets are *zero-based* character positions within a text block
+* Continuation line breaks (within a prose text block) are *not* counted
+* Punctuation characters *are* counted
+* The marker syntax itself (`{N}`, `{/N}`) is *not* counted
+
+[example]
+====
+[source]
+----
+Text:     時不利兮{1}騅{/1}不逝。
+Clean:    時不利兮騅不逝。
+Offsets:  0 1 2 3 4 5 6 7
+
+Marker {1}...{/1}:
+  offset: 5, length: 1 (covers 騅)
+----
+====
+

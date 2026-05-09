@@ -1,0 +1,42 @@
+[[textual-criticism]]
+== Textual criticism
+
+Classical Chinese texts exist in multiple editions with variant readings.
+CHAM provides dedicated annotation kinds for recording textual variants and collation notes.
+
+=== Collation entries
+
+The `collation` kind records variant readings (異文) found in different editions or manuscripts of the same text.
+
+[source]
+----
+{3} collation source:四庫全書本 [作「道可」]
+{3} collation source:帛書甲本 [作「道可道也」]
+{3} collation source:河上公本 [作「道可道，非常道」]
+----
+
+A collation entry *should* include a `source` parameter identifying the edition.
+
+=== Variant entries
+
+The `variant` kind records emendations and textual decisions.
+
+[source]
+----
+{5} variant action:emend [「水」][原文作「水」，據考證當作「冰」]
+{8} variant action:note [此處各本異文甚多，今從通行本]
+----
+
+[cols="1,3"]
+|===
+| Action | Description
+
+| `emend`
+| Emendation (改字) — the text has been corrected from a different reading
+
+| `note`
+| Note (存疑) — variant readings are noted but no correction is made
+
+| `parallel`
+| Parallel (並存) — multiple readings are presented together
+|===

@@ -1,0 +1,190 @@
+[[file-structure]]
+== File structure
+
+CHAM files are organized within a `content/` directory.
+Each subdirectory is either a *piece folder* (containing one text) or a *book folder* (containing a multi-chapter work).
+Piece and book folders may coexist and nest.
+
+=== Piece folders
+
+A piece folder represents a single independent text — a poem, an essay, or a chapter within a book.
+It is identified by the presence of a `text.cham.md` file.
+
+[source]
+----
+content/
+  001_垓下歌/
+    text.cham.md
+    author-brief.md
+  002_大風歌/
+    text.cham.md
+  003_岳陽樓記/
+    text.cham.md
+    background.md
+    analysis.md
+----
+
+=== Book folders
+
+A book folder represents a multi-chapter work.
+It is identified by the presence of a `book.yaml` file and contains piece subdirectories for each chapter.
+
+[source]
+----
+content/
+  老子/
+    book.yaml
+    01_第一章/
+      text.cham.md
+      wangbi.cham.md
+      hesonggong.cham.md
+    02_第二章/
+      text.cham.md
+      wangbi.cham.md
+----
+
+Book folders may be nested (volumes, parts):
+
+[source]
+----
+content/
+  詩經/
+    book.yaml
+    國風/
+      book.yaml
+      01_關雎/
+        text.cham.md
+      02_葛覃/
+        text.cham.md
+    小雅/
+      book.yaml
+      01_鹿鳴/
+        text.cham.md
+----
+
+=== book.yaml
+
+The `book.yaml` file in a book folder provides book-level metadata.
+It enables *inheritance*: piece frontmatter may omit fields already provided by the nearest ancestor `book.yaml`.
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `id`
+| required
+| Globally unique book identifier
+
+| `title`
+| required
+| Book title (Chinese)
+
+| `title-en`
+| optional
+| Book title (English)
+
+| `contributors`
+| optional
+| List of contributors with `ref` and `role`. Inherited by pieces.
+
+| `date`
+| optional
+| Historical date (dynasty, era, year). Inherited by pieces.
+
+| `genre`
+| optional
+| Genre: `poetry` \| `prose` \| `mixed` \| `drama`. Inherited by pieces.
+
+| `description`
+| optional
+| Free-text description
+|===
+
+[source,yaml]
+----
+id: laozi-boomian-a
+title: 帛書老子 甲本
+title-en: Book of Laozi on Silk, Version A
+contributors:
+  - ref: Laozi
+    role: author
+date:
+  dynasty: 周
+  circa: true
+genre: prose
+description: 馬王堆帛書老子甲本
+----
+
+==== Inheritance rules
+
+When a piece frontmatter omits a field, the parser *shall* inherit it from the nearest ancestor `book.yaml`.
+If the piece frontmatter explicitly declares a field, the piece-level value takes precedence.
+
+Inheritable fields: `contributors`, `date`, `genre`.
+
+=== Piece folder file manifest
+
+[cols="1,1,1,3"]
+|===
+| File | Type | Required | Description
+
+| `text.cham.md`
+| CHAM main file
+| *required*
+| Text + inline markers + annotations (see <<file-format>>)
+
+| `*.cham.md` (other)
+| CHAM subordinate file
+| optional
+| Annotation layers (commentary, translation, etc.)
+
+| `author-brief.md`
+| Markdown
+| optional
+| Author biography
+
+| `background.md`
+| Markdown
+| optional
+| Historical background
+
+| `analysis.md`
+| Markdown
+| optional
+| Literary appreciation
+
+| `follow-up.md`
+| Markdown
+| optional
+| Extension activities
+
+| `think-questions.md`
+| Markdown
+| optional
+| Discussion questions
+
+| `preparation.md`
+| Markdown
+| optional
+| Teaching preparation
+
+| `custom-*.md`
+| Markdown
+| optional
+| User-defined sections
+|===
+
+=== Naming rules
+
+* *CHAM files*: `*.cham.md` extension. The main file is conventionally `text.cham.md`. Subordinate files are named by contributor or purpose (e.g., `wangbi.cham.md`, `modern-trans.cham.md`).
+* *Piece folders*: `NNN_標題/` — a numeric prefix for sort order, followed by a human-readable short label. The prefix is independent of the frontmatter `id`.
+* *Book folders*: Free-form names (e.g., `老子/`, `論語/`). Numeric prefixes may be used for ordering (e.g., `01_大學/`).
+* *Plain Markdown files*: Standard `.md` extension. Not parsed as CHAM.
+
+=== Plain Markdown files
+
+Author biographies, background essays, and teaching materials are plain `.md` files.
+They are editorial content and do not contain CHAM annotation markers.
+These files may optionally include YAML frontmatter with `title` and `subject` fields for semantic linking.
+
+

@@ -1,0 +1,35 @@
+[[round-trip]]
+== Round-trip equivalence
+
+=== Guarantees
+
+A CHAM document that is parsed into structured data and then serialized back to CHAM format *shall* produce output that is semantically equivalent to the input.
+That is, parsing the serialized output *shall* yield the same structured data as parsing the original input.
+
+Specifically, the following *shall* be preserved through a round trip:
+
+* All annotation entries: `kind`, `params`, `headword`, `value`
+* Inline marker positions: text block index, character offset, and length
+* Frontmatter field values
+* Section metadata (`@key:value` entries)
+* The plain text content (after stripping markers)
+
+=== Non-guarantees
+
+The following *may* change through a round trip:
+
+* *Whitespace quantity* — the number of blank lines between sections, the indentation of YAML
+* *Field order* — the order of frontmatter fields or annotation entry parameters
+* *YAML quoting style* — the choice of single vs. double quotes vs. no quotes in frontmatter
+* *Comments* — inline comments in YAML frontmatter or in the text body are not preserved
+
+=== Equivalence rules
+
+Two CHAM documents are considered *semantically equivalent* if, after parsing both into structured data, the following conditions hold:
+
+. All annotation entries have matching `kind`, `params`, `headword`, and `value`
+. All inline markers map to the same text block, character offset, and length
+. All frontmatter fields have matching values
+. All section metadata entries match
+. The clean text (with markers removed) is identical
+

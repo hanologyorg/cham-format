@@ -1,0 +1,185 @@
+[[file-format]]
+== CHAM file format
+
+=== Overall structure
+
+A CHAM file consists of three parts in order:
+
+. *YAML frontmatter* — metadata delimited by `---`
+. *Text blocks with inline markers* — the actual text content (main files only)
+. *Annotation sections* — one or more named groups of annotation entries
+
+[source]
+----
+---
+(YAML frontmatter)
+---
+
+(Text blocks with {N}...{/N} inline markers)
+
+## 注釋
+(Annotation entries)
+
+## 王弼註
+@contributor: A010
+@role: annotator
+@nature: commentary
+(Annotation entries)
+----
+
+=== Main file frontmatter
+
+A main file (no `base` field) *shall* include the following frontmatter:
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `id`
+| required
+| Piece identifier (number or string). Unique within its book folder.
+
+| `title`
+| required
+| Piece title (Chinese).
+
+| `contributors`
+| conditional
+| List of contributors. Required unless inherited from `book.yaml`.
+
+| `date`
+| conditional
+| Historical date. Required unless inherited from `book.yaml`.
+
+| `genre`
+| conditional
+| One of: `poetry`, `prose`, `mixed`, `drama`. Required unless inherited.
+
+| `source`
+| optional
+| Edition and provenance information. See <<_source_fields>>.
+|===
+
+==== Contributors
+
+Each contributor entry *shall* have:
+
+* `ref` — references an author ID in `authors.yaml` (e.g., `A001`)
+* `role` — one of: `author`, `editor`, `annotator`, `translator`
+
+==== Date
+
+The `date` field supports the following sub-fields:
+
+[cols="1,3"]
+|===
+| Field | Description
+
+| `dynasty`
+| Dynasty name (e.g., `秦末`, `唐`)
+
+| `era`
+| Era name (年號), e.g., `開元`
+
+| `era_year`
+| Year within the era (年號紀年)
+
+| `sexagenary`
+| Sexagenary cycle year (天干地支), e.g., `甲子`
+
+| `iso`
+| ISO/CE year. Negative for BCE (no year 0).
+
+| `circa`
+| Boolean. `true` indicates an approximate date.
+|===
+
+[source,yaml]
+----
+id: 1
+title: 垓下歌
+contributors:
+  - ref: A001
+    role: author
+date:
+  dynasty: 秦末
+  circa: true
+genre: poetry
+----
+
+[[_source_fields]]
+==== Source fields
+
+The `source` field records edition and provenance information for the text.
+
+[cols="1,3"]
+|===
+| Field | Description
+
+| `edition`
+| Edition or version identifier (e.g., `四庫全書本`, `帛書甲本`, `中華書局標點本`)
+
+| `publisher`
+| Publisher or compilation source
+
+| `textRef`
+| Identifier linking this piece to a work in an external reference system
+
+| `relation`
+| Relationship to the referenced work (e.g., `section`, `excerpt`, `complete`)
+
+| `page`
+| Page number(s) in the source edition
+|===
+
+[source,yaml]
+----
+source:
+  edition: 四庫全書本
+  textRef: difan
+  relation: section
+----
+
+=== Subordinate file frontmatter
+
+A subordinate file *shall* include:
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `base`
+| required
+| Filename of the main file (typically `text.cham.md`)
+
+| `contributor`
+| required
+| Contributor ID (references `authors.yaml`)
+
+| `role`
+| required
+| Role: `annotator` \| `translator` \| `editor`
+
+| `dynasty`
+| optional
+| Dynasty of the contributor
+
+| `nature`
+| optional
+| Nature: `commentary` \| `translation` \| `annotation` \| `exegesis` \| `notes`
+|===
+
+[source,yaml]
+----
+base: text.cham.md
+contributor: A010
+role: annotator
+dynasty: 三國（魏）
+nature: commentary
+----
+
+=== Content body
+
+The content body follows the frontmatter and consists of text blocks (<<text-blocks>>), inline markers (<<inline-markers>>), and annotation sections (<<annotation-sections>>).
+In a subordinate file, the content body contains only annotation sections — no text blocks or inline markers.
+

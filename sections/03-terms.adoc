@@ -1,0 +1,41 @@
+[[terms]]
+== Terms and definitions
+
+[[term-cham-file]]CHAM file:: A text file with the `.cham.md` extension containing classical Chinese text, inline markers, and/or annotation entries. See <<file-format>>.
+
+[[term-main-file]]main file:: The primary CHAM file in a piece folder, containing the text content and inline markers. Identified by the absence of a `base` field in its frontmatter. Conventionally named `text.cham.md`. See <<multi-file>>.
+
+[[term-subordinate-file]]subordinate file:: A CHAM file that references a main file via its `base` frontmatter field. It contains only annotation entries, referencing the main file's marker table. See <<multi-file>>.
+
+[[term-marker]]marker:: A zero-width inline annotation reference point. Markers are expressed as `{N}` (opening) and `{/N}` (closing), where `N` is a positive integer. See <<inline-markers>>.
+
+[[term-marker-table]]marker table:: The mapping from marker ID to the text block, character offset, and length of the marked range. Built by parsing a main file's inline markers.
+
+[[term-text-block]]text block:: A contiguous unit of text delimited by blank lines. Text blocks are the primary content units in a CHAM file. See <<text-blocks>>.
+
+[[term-section]]section (structural):: A group of text blocks separated by two or more blank lines. Sections represent structural breaks such as stanzas, chapters, or paragraphs.
+
+[[term-annotation-entry]]annotation entry:: A single annotation that targets a specific position or range in the text. Composed of a target, a kind, optional parameters, and bracket-enclosed values. See <<annotation-entries>>.
+
+[[term-annotation-section]]annotation section:: A named group of annotation entries within a CHAM file, introduced by a `##` heading. See <<annotation-sections>>.
+
+[[term-annotation-layer]]annotation layer:: An independent set of annotations from a specific contributor or tradition. Layers may come from different files (multi-file mode) or different annotation sections (single-file mode). See <<annotation-layers>>.
+
+[[term-annotation-kind]]annotation kind:: The type of an annotation entry, expressed as a lowercase keyword (e.g., `pron`, `meaning`, `person`). The set of kinds is open and extensible. See <<annotation-entries>>.
+
+[[term-headword]]headword:: The word or phrase being annotated, as it should be displayed in the annotation. May differ from the full text of the marked range. Expressed in square brackets before the annotation value.
+
+[[term-offset]]offset:: The zero-based character position within a text block, used to locate inline markers and annotation targets. Punctuation characters are counted; marker syntax itself is not. See <<inline-markers>>.
+
+[[term-registry]]registry:: A structured YAML file that provides authoritative reference data for entities (authors, places, events, dynasties, etc.). See <<registries>>.
+
+[[term-lexicon]]global lexicon:: A registry file (`lexicon.yaml`) that provides pronunciation data for characters and words across all texts. See <<annotation-layers>>.
+
+[[term-frontmatter]]frontmatter:: YAML metadata at the beginning of a CHAM file, delimited by `---` lines. Contains the document's ID, title, contributors, date, and genre.
+
+[[term-piece-folder]]piece folder:: A directory containing the files for a single piece (poem, chapter, or other text unit). Identified by containing a `text.cham.md` file. See <<file-structure>>.
+
+[[term-book-folder]]book folder:: A directory containing a `book.yaml` file and one or more piece subdirectories. Represents a multi-chapter work. See <<file-structure>>.
+
+[[term-round-trip]]round-trip equivalence:: The property that parsing a CHAM document, serializing the result, and parsing again produces semantically identical structured data. See <<round-trip>>.
+

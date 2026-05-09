@@ -1,0 +1,286 @@
+[appendix]
+== Quality rules
+
+This appendix defines quality standards for CHAM source files — what a well-formed collection looks like, common pitfalls, and rules that every `text.cham.md` *shall* satisfy.
+
+=== Directory structure rules
+
+* `book.yaml` *shall* exist at the collection root
+* Piece subdirectories use `NNN_標題/` naming — numeric prefix sorts pieces; independent of `id` in frontmatter
+* Parentheses in directory names use full-width `（ ）`, not half-width `( )`
+* Only `.cham.md` and `.md` files belong inside piece directories — no PDFs, images, or generated artifacts
+
+=== Frontmatter rules
+
+==== Required fields
+
+[cols="1,1,3"]
+|===
+| Field | Required | Notes
+
+| `id`
+| yes
+| Number or string. Unique within collection.
+
+| `title`
+| yes
+| Full title of the piece.
+
+| `contributors`
+| yes (unless inherited)
+| Array with `ref` + `role`.
+
+| `date.dynasty`
+| yes
+| Dynasty name.
+
+| `genre`
+| yes
+| One of: `poetry`, `prose`, `mixed`, `drama`.
+|===
+
+==== Author references
+
+* `ref` values (e.g., `A189`) *shall* correspond to entries in `data/authors.yaml`
+* IDs are permanent — once assigned, never reused or changed
+* The `name` field *shall* be a proper author name, not a sentence fragment
+
+==== Common mistakes
+
+* Missing `role: author` on contributors
+* Using `dynasty:` at top level instead of nested under `date:`
+* Forgetting the closing `---` of the frontmatter
+
+=== Body text rules
+
+==== Poetry formatting
+
+* One verse unit per line (couplet for regulated verse, natural line breaks for 詞)
+* Separate verse units with a single blank line
+* Separate stanzas with two or more blank lines
+
+==== Prose formatting
+
+* No hard line breaks within paragraphs — keep prose as single logical lines
+* Separate paragraphs with exactly one blank line
+
+==== Content integrity
+
+* The body text *shall not* be altered from the source — no modernization, simplification, or "corrections"
+* The body text *shall not* add punctuation that isn't in the source
+* Page artifacts (headers, page numbers, `--- PAGE BREAK ---` markers) *shall* be removed
+* Editorial sections (想一想, 活動) *shall not* appear in the body — they belong in separate `.md` files
+* Stray footnote digits after punctuation (`。1`, `？2`) *shall* be removed
+
+=== Marker rules
+
+==== Balance
+
+. Every `{N}` *shall* have a matching `{/N}`
+. Every marker in the body *should* have at least one annotation entry — orphan markers indicate incomplete work
+. Every annotation entry targeting `{N}` *shall* reference a marker that exists in the body
+. Markers *should* wrap the minimum meaningful unit — prefer individual words/phrases over entire sentences
+
+==== Numbering
+
+* Number markers sequentially starting from 1, following the order they appear in the text
+* Gaps in marker numbering (e.g., using `{1}`, `{3}` without `{2}`) usually indicate an error — verify that gaps are intentional
+
+=== Annotation rules
+
+==== Bracket rules
+
+. Every `[` *shall* have a matching `]`
+. No nested `[]` inside annotation values — use full-width `（ ）` instead
+. Multi-line values use `[` on the opening line and `]` alone on the closing line
+. Single-line values keep `[]` on one line
+
+==== Pronunciation entries
+
+* `pron` entries *shall* come before the `meaning` entry for the same marker
+* `pron type:hom` *should* be paired with `pron type:pinyin` when the source provides both Cantonese and Mandarin readings
+* Every marker with `pron` entries *should* also have a `meaning` entry
+
+==== Pronunciation normalization
+
+* Pinyin values *shall* use standard Latin characters, not IPA:
+  ** `ɑ` (U+0251) → `a` (U+0061)
+  ** `ɡ` (U+0261) → `g` (U+0067)
+* Tone marks use combining diacritics on standard vowels: `ā á ǎ à`, `ē é ě è`, etc.
+
+==== Entry spacing
+
+* Place a blank line between annotation entries for readability
+* Do *not* place blank lines between `pron` and `meaning` entries for the same marker — keep them grouped
+
+==== Empty annotations
+
+* Do *not* leave empty definitions — the pattern `字：。` is incomplete
+* If a piece has no annotations, include an empty `## 注釋` section to signal that the absence is intentional
+
+=== Subordinate file rules
+
+Every subordinate `.cham.md` file (with a `base` field) *shall* include:
+
+[cols="1,1,2"]
+|===
+| Field | Required | Example
+
+| `base`
+| yes
+| `text.cham.md`
+
+| `contributor`
+| yes
+| `A010`
+
+| `role`
+| yes
+| `annotator`, `commentator`, `translator`
+
+| `nature`
+| yes
+| `commentary`, `translation`, `annotation`
+|===
+
+Every `{N}` in a subordinate file's annotations *shall* exist in the main file's body.
+
+=== Validation checklist
+
+==== Parse check
+
+* Parsing succeeds without errors
+* `meta.title` is present
+* `meta.id` is present
+
+==== Marker balance
+
+* Every `{N}` in the body has a matching `{/N}`
+* Every marker ID in the body has at least one annotation entry
+* Every annotation entry targeting `{N}` references a marker that exists in the body
+* Marker numbering is sequential (no gaps without justification)
+
+==== Bracket balance
+
+* Every `[` in the annotations section has a matching `]`
+* No nested `[]` in annotation values (use `（ ）` instead)
+* No raw pronunciation notation inside `meaning` values (`○粵[...]`)
+
+==== Pronunciation
+
+* Pinyin values use standard Latin characters (no IPA `ɑ`, `ɡ`)
+* `pron type:hom` entries are paired with `pron type:pinyin` where source provides both
+* Markers with `pron` also have `meaning` entries
+
+==== Content integrity
+
+* Body text matches the source exactly (no character changes)
+* No page artifacts remain (headers, page numbers, PAGE BREAK markers)
+* No stray footnote digits after punctuation
+* No editorial sections in the body
+* No empty definitions
+* No dual annotation systems (old-style + CHAM coexisting)
+
+==== Formatting
+
+* Prose: no hard line breaks within paragraphs
+* Poetry: one verse unit per line, blank line between units
+* Annotation entries separated by blank lines
+* `pron` entries grouped with their `meaning` entry
+
+==== Frontmatter
+
+* YAML frontmatter is complete (id, title, contributors, date, genre)
+* `date.dynasty` is present and correct
+* `genre` field is present (or inherited from `book.yaml`)
+* All `ref` values in `contributors` exist in `data/authors.yaml`
+
+==== File structure
+
+* `text.cham.md` exists
+* `book.yaml` exists at collection root
+* Directory name uses full-width `（ ）` for parentheses
+
+==== Cross-reference
+
+* Author refs (A-IDs) have entries in `authors.yaml`
+* Author names are correct (not sentence fragments)
+* Dynasty values in authors are historically accurate
+
+=== Common antipatterns
+
+==== Hard-wrapped prose
+
+Bad:
+[source]
+----
+余幼時即{1}嗜學{/1}。家貧，無從{2}致{/2}書以觀，每假借於
+藏書之家，手自筆錄，{3}計日以還{/3}。
+----
+
+Keep prose as single logical lines.
+
+==== Brackets inside brackets
+
+Bad:
+[source]
+----
+{15} meaning [被：穿著也。綺繡：彩色絲織品[綾羅綢緞]。]
+----
+
+Good:
+[source]
+----
+{15} meaning [被：穿著也。綺繡：彩色絲織品（綾羅綢緞）。]
+----
+
+==== Pronunciation left in meaning text
+
+Bad:
+[source]
+----
+{6} meaning [羸：○粵[雷]，[lœy4]；○漢[léi]。瘦弱多病。]
+----
+
+The `[]` inside the value confuses the parser. Use separate `pron` entries:
+
+[source]
+----
+{6} pron type:hom lang:yue [雷；lœy4]
+{6} pron type:pinyin lang:cmn [léi]
+{6} meaning [瘦弱多病。]
+----
+
+==== Missing annotation section
+
+Even pieces with zero annotations *should* include an empty section:
+
+[source]
+----
+## 注釋
+----
+
+==== IPA characters in pinyin
+
+Bad: `[chɑ́nɡ]` — Good: `[cháng]`
+
+Bad: `[ɡuɑ̀n]` — Good: `[guàn]`
+
+==== Empty definitions
+
+Bad: `{5} meaning [甸：。古時稱郊外的地方。]` — the `甸：。` is empty.
+
+Good: `{5} meaning [甸：郊外。古時稱郊外的地方。]`
+
+==== Dual annotation systems
+
+A file *shall not* contain both old-style numbered annotations AND CHAM `## 注釋`. The old-style annotations *shall* be removed entirely.
+
+==== Common audit findings
+
+The following issues are frequently found and *should* be checked:
+
+* Stray footnote digits in body text (`。1`, `？2`)
+* Missing `genre` field — every `text.cham.md` needs `genre` (own or inherited)
+* Empty `dynasty` field — `date.dynasty` *shall* have a value
+* Non-sequential marker numbering — gaps usually indicate conversion errors

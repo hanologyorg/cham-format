@@ -1,0 +1,54 @@
+[[multi-file]]
+== Multi-file relationships
+
+Complex texts with multiple annotation layers (e.g., classical commentaries from different traditions) can distribute annotations across multiple files, all sharing a common marker table.
+
+=== Main file
+
+The main file is identified by the absence of a `base` field in its frontmatter. It:
+
+* Contains the text content with inline markers
+* May contain its own annotation entries
+* Defines the marker table used by all subordinate files in the same piece folder
+
+=== Subordinate file
+
+A subordinate file is identified by the presence of a `base` field in its frontmatter. It:
+
+* Does *not* contain text content or inline markers
+* Contains only annotation entries that reference the main file's marker IDs
+* Has its own contributor, date, and nature metadata
+
+=== Merge rules
+
+When processing a piece folder, a parser *shall*:
+
+. Load the main file and build the marker table (marker ID → text block + offset + length)
+. Load all other `*.cham.md` files in the same directory that contain a `base` field
+. For each subordinate file, resolve its annotation entries against the main file's marker table
+. Merge all annotations. Section names *shall not* be duplicated across files
+
+=== Usage patterns
+
+==== Single-file mode
+
+For simple texts (individual poems, short prose), all annotations reside in `text.cham.md` using annotation sections to separate layers.
+This is the simplest mode and requires only one file.
+
+==== Multi-file mode
+
+For complex texts (classical works with multiple commentaries), each annotation layer is stored in a separate subordinate file.
+This provides clear attribution and enables independent editing of each layer.
+
+[source]
+----
+content/老子/01_第一章/
+  text.cham.md            # Main: text + inline markers + editor annotations
+  wangbi.cham.md          # Wang Bi's commentary (base: text.cham.md)
+  modern-trans.cham.md    # Modern translation (base: text.cham.md)
+----
+
+Both modes are fully compatible in syntax.
+The only difference is file organization.
+A single-file piece with multiple `##` sections and a multi-file piece with separate files produce equivalent structured data.
+

@@ -1,0 +1,233 @@
+[[annotation-entries]]
+== Annotation entries
+
+Annotation entries are the core data units that attach information to positions in the text.
+Each entry targets a specific range and classifies the annotation with a `kind`.
+
+=== Syntax
+
+The general form of an annotation entry is:
+
+[source]
+----
+target kind params [headword][value]
+target kind params [value]
+----
+
+Components:
+
+* `target` — what the annotation points to (<<_target>>)
+* `kind` — the annotation type (<<_kind>>)
+* `params` — key-value parameters specific to the kind (<<_parameters>>)
+* `[headword][value]` or `[value]` — the annotation content (<<_bracket_values>>)
+
+[[_target]]
+=== Target
+
+The target identifies what portion of the text the annotation applies to:
+
+[cols="1,1,3"]
+|===
+| Target | Semantic | Usage
+
+| `{N}`
+| Inline marker reference
+| References the range defined by `{N}`...`{/N}` in the text.
+
+| `@title`
+| Title text
+| The annotation targets the piece's title.
+
+| `@full`
+| Full text
+| The annotation targets the entire piece.
+
+| `@verse:L:C`
+| Position reference
+| Targets text block `L` at character offset `C`. Rarely used; provided for precision when no inline marker exists.
+|===
+
+[[_kind]]
+=== Kind
+
+The `kind` is an open enumeration.
+Each kind defines its own parameter rules and value format.
+The following kinds are defined by this specification:
+
+[cols="1,1,1,3"]
+|===
+| Kind | Required Params | Value | Description
+
+| `pron`
+| `type`, `lang`
+| `[reading]` or `[char][reading]`
+| Pronunciation annotation. Supports homophones, romanization systems, and phonetic notation.
+
+| `meaning`
+| —
+| `[explanation]` or `[headword][explanation]`
+| Semantic annotation — the definition or explanation of a word or phrase.
+
+| `person`
+| `ref` (recommended)
+| `[name][brief]` or `[brief]`
+| Person reference. `ref` links to `authors.yaml`.
+
+| `place`
+| `ref` (optional)
+| `[name][desc]` or `[desc]`
+| Place name annotation. `ref` links to `places.yaml`.
+
+| `event`
+| `ref` (optional)
+| `[name][desc]` or `[desc]`
+| Historical event annotation. `ref` links to `events.yaml`.
+
+| `date`
+| `dynasty`, `era`, `year`, `iso` (all optional)
+| `[text][desc]`
+| Date reference with optional machine-readable parameters.
+
+| `allusion`
+| `source` (optional)
+| `[quote][explanation]`
+| Literary allusion. `source` indicates the origin text.
+
+| `commentary`
+| —
+| `[text]`
+| Traditional commentary (古注). Free-form text from a historical commentator.
+
+| `translation`
+| —
+| `[text]`
+| Modern translation or transliteration.
+
+| `collation`
+| `source` (recommended)
+| `[variant_text][note]` or `[note]`
+| Textual criticism (校勘). Records variant readings (異文) across editions. `source` identifies the edition or manuscript.
+
+| `variant`
+| `action` (optional)
+| `[original][emended]` or `[reading][note]`
+| Textual variant or emendation. `action` indicates the type: `emend` (改字), `note` (存疑), `parallel` (並存).
+
+| `see-also`
+| `ref` (optional)
+| `[description]`
+| Cross-reference to another piece or external text. `ref` links to the target piece or registry entry.
+|===
+
+Implementations *may* define additional kinds.
+Unknown kinds *shall* be preserved by parsers and passed through unchanged.
+
+[[_parameters]]
+=== Parameters
+
+Parameters are `key:value` pairs separated by spaces, positioned after the `kind` and before the bracket values.
+
+[source]
+----
+{3} pron type:hom lang:yue [錐]
+{5} person ref:A020 [皋陶][舜帝理官]
+{7} date dynasty:唐 era:開元 year:15 iso:727 [開元十五年]
+{4} allusion source:詩經·采薇 [昔我往矣][出自《詩經·小雅·采薇》]
+----
+
+==== Pronunciation parameters
+
+[cols="1,1,3"]
+|===
+| Parameter | Values | Description
+
+| `type`
+| `hom` \| `jyut` \| `pinyin` \| `bopomofo` \| `fanqie`
+| Pronunciation system type
+
+| `lang`
+| `yue` \| `cmn`
+| Language variant (ISO 639-5 codes)
+|===
+
+==== Fanqie (反切)
+
+The `fanqie` pronunciation type represents the traditional Chinese phonetic notation system using two characters to indicate the initial (聲母) and final (韻母) of a syllable.
+
+[source]
+----
+{5} pron type:fanqie lang:cmn [德紅切]
+{8} pron type:fanqie lang:cmn [房六切]
+----
+
+The value `[XY切]` means: take the initial of character X and the final-plus-tone of character Y to reconstruct the pronunciation.
+|===
+
+==== Entity reference parameters
+
+The `ref` parameter is used by `person`, `place`, and `event` kinds to link to registry entries (see <<registries>>).
+
+[[_bracket_values]]
+=== Bracket values
+
+Bracket values carry the actual annotation content:
+
+[cols="1,1"]
+|===
+| Form | Semantic
+
+| `[value]`
+| Single value. Headword defaults to the text matched by the inline marker range.
+
+| `[headword][value]`
+| Two values. Headword is the word being explained (may differ from the full marker range text).
+|===
+
+=== Multi-line values
+
+When the value spans multiple lines, it begins with `[` on the annotation line and ends with `]` alone on its own line:
+
+[source]
+----
+{2} meaning [奈何][
+「奈何」意為「怎麼辦」。
+全句即「把你怎麼辦呢」。
+
+表達了項羽對虞姬的深情與無奈。
+]
+----
+
+Multi-line values may contain any characters, blank lines, and paragraphs.
+The closing `]` *shall* appear alone on a line with no preceding or following non-whitespace characters.
+
+=== Complete examples
+
+[source]
+----
+## 注釋
+
+{1} pron type:hom lang:yue [錐]
+{1} pron type:jyut lang:yue [zeoi1]
+{1} pron type:pinyin lang:cmn [zhuī]
+{1} meaning [騅][項羽的馬名]
+
+{2} meaning [奈何][
+「奈何」意為「怎麼辦」。
+全句即「把你怎麼辦呢」。
+]
+
+{3} person ref:A020 [皋陶][舜帝時代理官，中國司法鼻祖]
+
+{4} place ref:P001 [垓下][今安徽省靈璧縣東南]
+
+{5} date dynasty:唐 era:開元 year:15 iso:727 [開元十五年]
+
+{6} allusion source:詩經·采薇 [昔我往矣][
+出自《詩經·小雅·采薇》。
+原句為「昔我往矣，楊柳依依」。
+]
+
+{7} @title pron type:hom lang:yue [垓][該]
+{8} @full meaning [全詩以「兮」字貫穿四句，反覆詠嘆。]
+----
+

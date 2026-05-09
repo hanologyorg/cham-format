@@ -1,0 +1,84 @@
+
+[[pipeline]]
+== Processing pipeline
+
+=== Overview
+
+A CHAM processing pipeline converts source files (CHAM documents + registries) into structured output suitable for consumption by front-end applications, databases, or other tools.
+
+[source]
+----
+data/lexicon.yaml ─────────┐
+                           │
+content/                   │
+  NNN_標題/ (pieces) ──────┤
+    text.cham.md ──────────┤
+    *.cham.md (sub files) ─┤
+    *.md (prose) ──────────┤──→ CHAM Parser ──→ Merge ──→ JSON
+  書籍/                    │                        │
+    book.yaml ─────────────┤                        ↓
+    NNN_篇章/ ─────────────┤                  cham.json
+      text.cham.md ────────┤                  text.json
+      *.cham.md ───────────┤                  authors.json
+      *.md ────────────────┘                  metadata.json
+
+data/authors.yaml ─────────┤
+data/places.yaml ──────────┤
+data/events.yaml ──────────┘
+----
+
+=== Parse steps
+
+A conforming parser *shall* execute the following steps:
+
+. *Load global lexicon* — parse `data/lexicon.yaml`
+. *Scan content directory* — recursively traverse `content/`:
+  ** Directory containing `text.cham.md` → piece folder
+  ** Directory containing `book.yaml` → book folder, recurse into subdirectories
+. *Load book metadata* — parse `book.yaml` if present, establishing the inheritance context
+. *Load main file* (CHAM file without `base` field):
+  .. Parse YAML frontmatter, merging inherited fields from `book.yaml`
+  .. Extract text blocks using blank-line semantics (<<text-blocks>>)
+  .. Parse inline markers `{N}`/`{/N}` → build marker table
+  .. Strip markers to produce clean text
+. *Load subordinate files* (CHAM files with `base` field):
+  .. Parse YAML frontmatter (including `base` reference)
+  .. Parse annotation entries referencing the main file's marker table
+. *Load plain Markdown files* — parse auxiliary content (biographies, background, etc.)
+. *Apply global lexicon*:
+  .. Scan clean text for characters/words matching lexicon entries
+  .. Create pronunciation annotation instances for each match
+  .. If an inline `pron` exists at the same position, the inline annotation takes precedence
+. *Merge and output* — produce structured JSON output
+
+=== Output formats
+
+The pipeline *shall* produce the following outputs:
+
+[cols="1,3"]
+|===
+| File | Description
+
+| `cham.json`
+| Complete CHAM structured data — pieces, annotations, marker tables. Preserves the full semantic model.
+
+| `text.json`
+| Flat format optimized for front-end consumption. Replaces genre-specific formats (e.g., `poems.json`).
+
+| `authors.json`
+| People registry in JSON format, derived from `authors.yaml`.
+
+| `metadata.json`
+| Book-level metadata, merged from all `book.yaml` files.
+|===
+
+=== Error handling
+
+Parsers *should* produce informative error messages including:
+
+* File path and line number where the error occurred
+* The specific syntax rule that was violated
+* A suggestion for fixing the error when possible
+
+For non-fatal issues (e.g., a subordinate file referencing a non-existent marker ID), parsers *should* emit warnings and skip the affected annotation rather than failing entirely.
+

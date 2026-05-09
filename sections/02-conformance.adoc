@@ -1,0 +1,40 @@
+[[conformance]]
+== Conformance
+
+=== Conforming CHAM documents
+
+A file is a *conforming CHAM document* if it satisfies all of the following:
+
+* It uses the `.cham.md` file extension
+* It contains valid YAML frontmatter delimited by `---` on lines containing only dashes
+* The frontmatter includes all required fields for its document type (main file or subordinate file)
+* Inline markers (`{N}` and `{/N}`) are well-formed: every opening marker has a matching closing marker
+* Marker IDs are unique within the file and are positive integers
+* Annotation entries follow the syntax defined in <<annotation-entries>>
+* Bracket values are properly balanced: every `[` has a matching `]`
+
+=== Conforming CHAM parsers
+
+A *conforming CHAM parser* is software that:
+
+* Accepts one or more conforming CHAM documents as input
+* Produces structured data that preserves all semantic content
+* Implements the blank-line semantics defined in <<text-blocks>>
+* Correctly resolves inline marker positions using the offset calculation defined in <<inline-markers>>
+* Supports overlapping and enclosed ranges
+* Parses all annotation entry kinds defined in <<annotation-entries>>
+* Handles multi-file relationships as defined in <<multi-file>>
+* Merges subordinate files according to the rules in <<multi-file>>
+
+A conforming parser *should* produce informative error messages including line and column information when parsing fails.
+
+=== Conforming CHAM serializers
+
+A *conforming CHAM serializer* is software that:
+
+* Accepts structured data conforming to the CHAM data model as input
+* Produces a conforming CHAM document as output
+* Preserves round-trip equivalence as defined in <<round-trip>>
+* Produces output that is human-readable and editable
+
+

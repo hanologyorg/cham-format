@@ -1,0 +1,58 @@
+[[introduction]]
+== Introduction
+
+CHAM (Classical Han with Annotations Markup) is a structured markup format for classical Chinese texts.
+It is designed to serve as the *single source of truth* for digital libraries of classical Han literature — encompassing poetry, prose, philosophical works, historical records, rhapsodies, drama, and all other genres of classical Chinese writing.
+
+CHAM files are plain text files using a Markdown-based syntax with YAML frontmatter.
+They encode text content, inline annotation markers, annotation entries, and structural metadata in a format that is both human-editable and machine-parseable.
+
+=== Design principles
+
+[cols="1,3"]
+|===
+| Principle | Description
+
+| Explicit declaration
+| All semantics are expressed through explicit syntax. No meaning is inferred from convention or positional assumption.
+
+| Universality
+| Not limited to poetry. CHAM supports all genres of classical Chinese literature — poetry (詩), prose (散文), philosophical works (經), historical records (史), rhapsodies (賦), and drama (戲曲).
+
+| Extensibility
+| Annotation kinds (`kind`) are an open enumeration. New kinds can be added without modifying the core specification.
+
+| Round-trip equivalence
+| CHAM → structured data → CHAM produces semantically equivalent output. The format is lossless for all semantic content.
+
+| Human-machine duality
+| CHAM files can be edited by hand in any text editor and can be parsed programmatically with equal ease.
+|===
+
+=== Scope
+
+CHAM files handle:
+
+* Text content with inline annotation markers
+* Annotation entries (pronunciation, semantics, people, places, events, dates, allusions, commentary, translation, and extensible kinds)
+* Multi-layer annotations (independent annotation layers from different contributors)
+* Multi-file relationships (main files and subordinate files sharing a common marker table)
+
+CHAM files do *not* handle:
+
+* Author biographies, background essays, literary appreciation — these are plain Markdown files (see <<file-structure>>)
+* Global pronunciation lexicons — these are separate YAML registry files (see <<registries>>)
+* Registry data (authors, places, events, dynasties) — these are separate YAML files (see <<registries>>)
+
+=== Format support
+
+This specification defines CHAM in terms of a Markdown-based file format (`.cham.md`) and JSON output.
+The format is designed to be format-agnostic at the semantic level, allowing future implementations to support additional serialization formats (e.g., YAML, XML, database storage) without changing the underlying data model.
+
+A conforming implementation may support any combination of input/output formats, provided the semantic model defined in this specification is preserved.
+
+=== Notation
+
+In this specification, the key words *shall*, *shall not*, *should*, *should not*, and *may* are to be interpreted as described in RFC 2119.
+
+
