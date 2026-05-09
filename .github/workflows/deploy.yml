@@ -23,7 +23,7 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
-      - run: ruby scripts/build.rb
+      - run: bundle exec ruby scripts/build.rb
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
