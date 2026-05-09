@@ -1,0 +1,1729 @@
+= CHAM — Classical Han with Annotations Markup
+:docnumber: 1
+:edition: 1
+:revdate: 2026-05-08
+:language: zh-Hant
+:title-main-en: Classical Han with Annotations Markup (CHAM) specification
+:doctype: specification
+:toc: left
+:toclevels: 3
+:sectanchors:
+:sectnums:
+
+<<<
+<<<
+
+[[introduction]]
+== Introduction
+
+CHAM (Classical Han with Annotations Markup) is a structured markup format for classical Chinese texts.
+It is designed to serve as the *single source of truth* for digital libraries of classical Han literature — encompassing poetry, prose, philosophical works, historical records, rhapsodies, drama, and all other genres of classical Chinese writing.
+
+CHAM files are plain text files using a Markdown-based syntax with YAML frontmatter.
+They encode text content, inline annotation markers, annotation entries, and structural metadata in a format that is both human-editable and machine-parseable.
+
+=== Design principles
+
+[cols="1,3"]
+|===
+| Principle | Description
+
+| Explicit declaration
+| All semantics are expressed through explicit syntax. No meaning is inferred from convention or positional assumption.
+
+| Universality
+| Not limited to poetry. CHAM supports all genres of classical Chinese literature — poetry (詩), prose (散文), philosophical works (經), historical records (史), rhapsodies (賦), and drama (戲曲).
+
+| Extensibility
+| Annotation kinds (`kind`) are an open enumeration. New kinds can be added without modifying the core specification.
+
+| Round-trip equivalence
+| CHAM → structured data → CHAM produces semantically equivalent output. The format is lossless for all semantic content.
+
+| Human-machine duality
+| CHAM files can be edited by hand in any text editor and can be parsed programmatically with equal ease.
+|===
+
+=== Scope
+
+CHAM files handle:
+
+* Text content with inline annotation markers
+* Annotation entries (pronunciation, semantics, people, places, events, dates, allusions, commentary, translation, and extensible kinds)
+* Multi-layer annotations (independent annotation layers from different contributors)
+* Multi-file relationships (main files and subordinate files sharing a common marker table)
+
+CHAM files do *not* handle:
+
+* Author biographies, background essays, literary appreciation — these are plain Markdown files (see <<file-structure>>)
+* Global pronunciation lexicons — these are separate YAML registry files (see <<registries>>)
+* Registry data (authors, places, events, dynasties) — these are separate YAML files (see <<registries>>)
+
+=== Format support
+
+This specification defines CHAM in terms of a Markdown-based file format (`.cham.md`) and JSON output.
+The format is designed to be format-agnostic at the semantic level, allowing future implementations to support additional serialization formats (e.g., YAML, XML, database storage) without changing the underlying data model.
+
+A conforming implementation may support any combination of input/output formats, provided the semantic model defined in this specification is preserved.
+
+=== Notation
+
+In this specification, the key words *shall*, *shall not*, *should*, *should not*, and *may* are to be interpreted as described in RFC 2119.
+
+
+[[conformance]]
+== Conformance
+
+=== Conforming CHAM documents
+
+A file is a *conforming CHAM document* if it satisfies all of the following:
+
+* It uses the `.cham.md` file extension
+* It contains valid YAML frontmatter delimited by `---` on lines containing only dashes
+* The frontmatter includes all required fields for its document type (main file or subordinate file)
+* Inline markers (`{N}` and `{/N}`) are well-formed: every opening marker has a matching closing marker
+* Marker IDs are unique within the file and are positive integers
+* Annotation entries follow the syntax defined in <<annotation-entries>>
+* Bracket values are properly balanced: every `[` has a matching `]`
+
+=== Conforming CHAM parsers
+
+A *conforming CHAM parser* is software that:
+
+* Accepts one or more conforming CHAM documents as input
+* Produces structured data that preserves all semantic content
+* Implements the blank-line semantics defined in <<text-blocks>>
+* Correctly resolves inline marker positions using the offset calculation defined in <<inline-markers>>
+* Supports overlapping and enclosed ranges
+* Parses all annotation entry kinds defined in <<annotation-entries>>
+* Handles multi-file relationships as defined in <<multi-file>>
+* Merges subordinate files according to the rules in <<multi-file>>
+
+A conforming parser *should* produce informative error messages including line and column information when parsing fails.
+
+=== Conforming CHAM serializers
+
+A *conforming CHAM serializer* is software that:
+
+* Accepts structured data conforming to the CHAM data model as input
+* Produces a conforming CHAM document as output
+* Preserves round-trip equivalence as defined in <<round-trip>>
+* Produces output that is human-readable and editable
+
+
+[[terms]]
+== Terms and definitions
+
+[[term-cham-file]]CHAM file:: A text file with the `.cham.md` extension containing classical Chinese text, inline markers, and/or annotation entries. See <<file-format>>.
+
+[[term-main-file]]main file:: The primary CHAM file in a piece folder, containing the text content and inline markers. Identified by the absence of a `base` field in its frontmatter. Conventionally named `text.cham.md`. See <<multi-file>>.
+
+[[term-subordinate-file]]subordinate file:: A CHAM file that references a main file via its `base` frontmatter field. It contains only annotation entries, referencing the main file's marker table. See <<multi-file>>.
+
+[[term-marker]]marker:: A zero-width inline annotation reference point. Markers are expressed as `{N}` (opening) and `{/N}` (closing), where `N` is a positive integer. See <<inline-markers>>.
+
+[[term-marker-table]]marker table:: The mapping from marker ID to the text block, character offset, and length of the marked range. Built by parsing a main file's inline markers.
+
+[[term-text-block]]text block:: A contiguous unit of text delimited by blank lines. Text blocks are the primary content units in a CHAM file. See <<text-blocks>>.
+
+[[term-section]]section (structural):: A group of text blocks separated by two or more blank lines. Sections represent structural breaks such as stanzas, chapters, or paragraphs.
+
+[[term-annotation-entry]]annotation entry:: A single annotation that targets a specific position or range in the text. Composed of a target, a kind, optional parameters, and bracket-enclosed values. See <<annotation-entries>>.
+
+[[term-annotation-section]]annotation section:: A named group of annotation entries within a CHAM file, introduced by a `##` heading. See <<annotation-sections>>.
+
+[[term-annotation-layer]]annotation layer:: An independent set of annotations from a specific contributor or tradition. Layers may come from different files (multi-file mode) or different annotation sections (single-file mode). See <<annotation-layers>>.
+
+[[term-annotation-kind]]annotation kind:: The type of an annotation entry, expressed as a lowercase keyword (e.g., `pron`, `meaning`, `person`). The set of kinds is open and extensible. See <<annotation-entries>>.
+
+[[term-headword]]headword:: The word or phrase being annotated, as it should be displayed in the annotation. May differ from the full text of the marked range. Expressed in square brackets before the annotation value.
+
+[[term-offset]]offset:: The zero-based character position within a text block, used to locate inline markers and annotation targets. Punctuation characters are counted; marker syntax itself is not. See <<inline-markers>>.
+
+[[term-registry]]registry:: A structured YAML file that provides authoritative reference data for entities (authors, places, events, dynasties, etc.). See <<registries>>.
+
+[[term-lexicon]]global lexicon:: A registry file (`lexicon.yaml`) that provides pronunciation data for characters and words across all texts. See <<annotation-layers>>.
+
+[[term-frontmatter]]frontmatter:: YAML metadata at the beginning of a CHAM file, delimited by `---` lines. Contains the document's ID, title, contributors, date, and genre.
+
+[[term-piece-folder]]piece folder:: A directory containing the files for a single piece (poem, chapter, or other text unit). Identified by containing a `text.cham.md` file. See <<file-structure>>.
+
+[[term-book-folder]]book folder:: A directory containing a `book.yaml` file and one or more piece subdirectories. Represents a multi-chapter work. See <<file-structure>>.
+
+[[term-round-trip]]round-trip equivalence:: The property that parsing a CHAM document, serializing the result, and parsing again produces semantically identical structured data. See <<round-trip>>.
+
+
+[[file-structure]]
+== File structure
+
+CHAM files are organized within a `content/` directory.
+Each subdirectory is either a *piece folder* (containing one text) or a *book folder* (containing a multi-chapter work).
+Piece and book folders may coexist and nest.
+
+=== Piece folders
+
+A piece folder represents a single independent text — a poem, an essay, or a chapter within a book.
+It is identified by the presence of a `text.cham.md` file.
+
+[source]
+----
+content/
+  001_垓下歌/
+    text.cham.md
+    author-brief.md
+  002_大風歌/
+    text.cham.md
+  003_岳陽樓記/
+    text.cham.md
+    background.md
+    analysis.md
+----
+
+=== Book folders
+
+A book folder represents a multi-chapter work.
+It is identified by the presence of a `book.yaml` file and contains piece subdirectories for each chapter.
+
+[source]
+----
+content/
+  老子/
+    book.yaml
+    01_第一章/
+      text.cham.md
+      wangbi.cham.md
+      hesonggong.cham.md
+    02_第二章/
+      text.cham.md
+      wangbi.cham.md
+----
+
+Book folders may be nested (volumes, parts):
+
+[source]
+----
+content/
+  詩經/
+    book.yaml
+    國風/
+      book.yaml
+      01_關雎/
+        text.cham.md
+      02_葛覃/
+        text.cham.md
+    小雅/
+      book.yaml
+      01_鹿鳴/
+        text.cham.md
+----
+
+=== book.yaml
+
+The `book.yaml` file in a book folder provides book-level metadata.
+It enables *inheritance*: piece frontmatter may omit fields already provided by the nearest ancestor `book.yaml`.
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `id`
+| required
+| Globally unique book identifier
+
+| `title`
+| required
+| Book title (Chinese)
+
+| `title-en`
+| optional
+| Book title (English)
+
+| `contributors`
+| optional
+| List of contributors with `ref` and `role`. Inherited by pieces.
+
+| `date`
+| optional
+| Historical date (dynasty, era, year). Inherited by pieces.
+
+| `genre`
+| optional
+| Genre: `poetry` \| `prose` \| `mixed` \| `drama`. Inherited by pieces.
+
+| `description`
+| optional
+| Free-text description
+|===
+
+[source,yaml]
+----
+id: laozi-boomian-a
+title: 帛書老子 甲本
+title-en: Book of Laozi on Silk, Version A
+contributors:
+  - ref: Laozi
+    role: author
+date:
+  dynasty: 周
+  circa: true
+genre: prose
+description: 馬王堆帛書老子甲本
+----
+
+==== Inheritance rules
+
+When a piece frontmatter omits a field, the parser *shall* inherit it from the nearest ancestor `book.yaml`.
+If the piece frontmatter explicitly declares a field, the piece-level value takes precedence.
+
+Inheritable fields: `contributors`, `date`, `genre`.
+
+=== Piece folder file manifest
+
+[cols="1,1,1,3"]
+|===
+| File | Type | Required | Description
+
+| `text.cham.md`
+| CHAM main file
+| *required*
+| Text + inline markers + annotations (see <<file-format>>)
+
+| `*.cham.md` (other)
+| CHAM subordinate file
+| optional
+| Annotation layers (commentary, translation, etc.)
+
+| `author-brief.md`
+| Markdown
+| optional
+| Author biography
+
+| `background.md`
+| Markdown
+| optional
+| Historical background
+
+| `analysis.md`
+| Markdown
+| optional
+| Literary appreciation
+
+| `follow-up.md`
+| Markdown
+| optional
+| Extension activities
+
+| `think-questions.md`
+| Markdown
+| optional
+| Discussion questions
+
+| `preparation.md`
+| Markdown
+| optional
+| Teaching preparation
+
+| `custom-*.md`
+| Markdown
+| optional
+| User-defined sections
+|===
+
+=== Naming rules
+
+* *CHAM files*: `*.cham.md` extension. The main file is conventionally `text.cham.md`. Subordinate files are named by contributor or purpose (e.g., `wangbi.cham.md`, `modern-trans.cham.md`).
+* *Piece folders*: `NNN_標題/` — a numeric prefix for sort order, followed by a human-readable short label. The prefix is independent of the frontmatter `id`.
+* *Book folders*: Free-form names (e.g., `老子/`, `論語/`). Numeric prefixes may be used for ordering (e.g., `01_大學/`).
+* *Plain Markdown files*: Standard `.md` extension. Not parsed as CHAM.
+
+=== Plain Markdown files
+
+Author biographies, background essays, and teaching materials are plain `.md` files.
+They are editorial content and do not contain CHAM annotation markers.
+These files may optionally include YAML frontmatter with `title` and `subject` fields for semantic linking.
+
+
+[[file-format]]
+== CHAM file format
+
+=== Overall structure
+
+A CHAM file consists of three parts in order:
+
+. *YAML frontmatter* — metadata delimited by `---`
+. *Text blocks with inline markers* — the actual text content (main files only)
+. *Annotation sections* — one or more named groups of annotation entries
+
+[source]
+----
+---
+(YAML frontmatter)
+---
+
+(Text blocks with {N}...{/N} inline markers)
+
+## 注釋
+(Annotation entries)
+
+## 王弼註
+@contributor: A010
+@role: annotator
+@nature: commentary
+(Annotation entries)
+----
+
+=== Main file frontmatter
+
+A main file (no `base` field) *shall* include the following frontmatter:
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `id`
+| required
+| Piece identifier (number or string). Unique within its book folder.
+
+| `title`
+| required
+| Piece title (Chinese).
+
+| `contributors`
+| conditional
+| List of contributors. Required unless inherited from `book.yaml`.
+
+| `date`
+| conditional
+| Historical date. Required unless inherited from `book.yaml`.
+
+| `genre`
+| conditional
+| One of: `poetry`, `prose`, `mixed`, `drama`. Required unless inherited.
+
+| `source`
+| optional
+| Edition and provenance information. See <<_source_fields>>.
+|===
+
+==== Contributors
+
+Each contributor entry *shall* have:
+
+* `ref` — references an author ID in `authors.yaml` (e.g., `A001`)
+* `role` — one of: `author`, `editor`, `annotator`, `translator`
+
+==== Date
+
+The `date` field supports the following sub-fields:
+
+[cols="1,3"]
+|===
+| Field | Description
+
+| `dynasty`
+| Dynasty name (e.g., `秦末`, `唐`)
+
+| `era`
+| Era name (年號), e.g., `開元`
+
+| `era_year`
+| Year within the era (年號紀年)
+
+| `sexagenary`
+| Sexagenary cycle year (天干地支), e.g., `甲子`
+
+| `iso`
+| ISO/CE year. Negative for BCE (no year 0).
+
+| `circa`
+| Boolean. `true` indicates an approximate date.
+|===
+
+[source,yaml]
+----
+id: 1
+title: 垓下歌
+contributors:
+  - ref: A001
+    role: author
+date:
+  dynasty: 秦末
+  circa: true
+genre: poetry
+----
+
+[[_source_fields]]
+==== Source fields
+
+The `source` field records edition and provenance information for the text.
+
+[cols="1,3"]
+|===
+| Field | Description
+
+| `edition`
+| Edition or version identifier (e.g., `四庫全書本`, `帛書甲本`, `中華書局標點本`)
+
+| `publisher`
+| Publisher or compilation source
+
+| `textRef`
+| Identifier linking this piece to a work in an external reference system
+
+| `relation`
+| Relationship to the referenced work (e.g., `section`, `excerpt`, `complete`)
+
+| `page`
+| Page number(s) in the source edition
+|===
+
+[source,yaml]
+----
+source:
+  edition: 四庫全書本
+  textRef: difan
+  relation: section
+----
+
+=== Subordinate file frontmatter
+
+A subordinate file *shall* include:
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `base`
+| required
+| Filename of the main file (typically `text.cham.md`)
+
+| `contributor`
+| required
+| Contributor ID (references `authors.yaml`)
+
+| `role`
+| required
+| Role: `annotator` \| `translator` \| `editor`
+
+| `dynasty`
+| optional
+| Dynasty of the contributor
+
+| `nature`
+| optional
+| Nature: `commentary` \| `translation` \| `annotation` \| `exegesis` \| `notes`
+|===
+
+[source,yaml]
+----
+base: text.cham.md
+contributor: A010
+role: annotator
+dynasty: 三國（魏）
+nature: commentary
+----
+
+=== Content body
+
+The content body follows the frontmatter and consists of text blocks (<<text-blocks>>), inline markers (<<inline-markers>>), and annotation sections (<<annotation-sections>>).
+In a subordinate file, the content body contains only annotation sections — no text blocks or inline markers.
+
+
+[[text-blocks]]
+== Text blocks
+
+Text blocks are the primary content units of a CHAM file.
+The text between the frontmatter closing `---` and the first annotation section heading (`##`) is parsed as text blocks.
+
+=== Blank line semantics
+
+The number of blank lines between content lines determines their structural relationship:
+
+[cols="1,1,3"]
+|===
+| Blank lines | Semantic | Description
+
+| 0 (consecutive lines)
+| Continuation
+| Lines belong to the same text block. Line breaks within the block do not affect annotation offsets.
+
+| 1 (single blank line)
+| Block boundary
+| New text block. In poetry: a new line/verse. In prose: a new paragraph.
+
+| 2+ (multiple blank lines)
+| Structural break
+| New section. In poetry: a new stanza. In prose: a major structural division.
+|===
+
+=== Poetry text
+
+In poetry mode (`genre: poetry`), each verse line is followed by a single blank line.
+Stanzas are separated by two or more blank lines.
+
+[source]
+----
+力拔山兮氣蓋世。
+
+時不利兮{1}騅{/1}不逝。
+
+{1}騅{/1}不逝兮可奈何！
+
+
+虞兮虞兮{2}奈若何{/2}！
+----
+
+[example]
+====
+The blank line after "可奈何！" is followed by another blank line, creating a 2-blank-line gap — this is a structural break separating the two stanzas.
+The file contains *2 sections* and *4 text blocks*.
+====
+
+=== Prose text
+
+In prose mode (`genre: prose`), consecutive lines without blank lines are *continuations* — they are merged into a single text block.
+Line breaks within a continuation block do not affect annotation character offsets.
+
+[source]
+----
+{1}道{/1}可道，非常{2}道{/2}。
+{3}名{/3}可名，非常{4}名{/4}。
+
+無名天地之始，有名萬物之母。
+故常無欲，以觀其妙；
+常有欲，以觀其徼。
+----
+
+[example]
+====
+The first two lines form one text block (no blank line between them).
+The single blank line creates a block boundary.
+The next three lines form a second text block.
+The file contains *1 section* and *2 text blocks*.
+====
+
+=== Section and block indexing
+
+Parsers *shall* assign indices as follows:
+
+* *Sections* are numbered sequentially starting from 0, each separated by 2+ blank lines.
+* *Text blocks* are numbered sequentially within each section, starting from 0.
+* Character offsets are calculated within each text block independently (see <<inline-markers>>).
+
+
+[[inline-markers]]
+== Inline markers
+
+Inline markers are zero-width annotations embedded in the text content.
+They define character ranges that annotation entries can reference.
+
+=== Syntax
+
+[cols="1,1"]
+|===
+| Marker | Description
+
+| `{N}`
+| Opening marker — marks the start of a range. Zero-width.
+
+| `{/N}`
+| Closing marker — marks the end of a range. Zero-width.
+|===
+
+Where `N` is a positive integer (1, 2, 3, ...).
+Multi-digit IDs are supported (e.g., `{12}`, `{/12}`).
+
+=== Characteristics
+
+==== Zero-width
+
+Markers do not wrap text. They are inserted at specific positions.
+Removing all markers yields the plain text:
+
+[source]
+----
+時不利兮{1}騅{/1}不逝。
+→ 時不利兮騅不逝。
+----
+
+==== Overlapping ranges
+
+Markers support overlapping ranges:
+
+[source]
+----
+{1}力拔{2}山兮{/1}氣蓋{/2}世。
+Range 1: 力拔山兮
+Range 2: 山兮氣蓋 (overlap: 山兮)
+----
+
+==== Enclosed ranges
+
+A range may be fully enclosed within another:
+
+[source]
+----
+{1}奈{2}若何{/2}{/1}！
+Range 1: 奈若何
+Range 2: 若何 (enclosed in Range 1)
+----
+
+==== Disallowed patterns
+
+Markers *shall not* produce syntax ambiguity.
+An opening marker *shall not* be closed by a different marker's closing tag when that would leave the first marker unclosed:
+
+* `{1}{2}{/1}{/2}` — allowed (properly interleaved)
+* `{1}{2}{/1}` — disallowed (marker 2 is unclosed)
+
+==== Uniqueness
+
+Each marker ID `N` *shall* be unique within a single CHAM file.
+The same ID may appear as both an opening and closing pair, but no two opening markers may share the same ID.
+
+=== Offset calculation
+
+Character offsets are calculated on the merged text block string after removing all marker syntax:
+
+* Offsets are *zero-based* character positions within a text block
+* Continuation line breaks (within a prose text block) are *not* counted
+* Punctuation characters *are* counted
+* The marker syntax itself (`{N}`, `{/N}`) is *not* counted
+
+[example]
+====
+[source]
+----
+Text:     時不利兮{1}騅{/1}不逝。
+Clean:    時不利兮騅不逝。
+Offsets:  0 1 2 3 4 5 6 7
+
+Marker {1}...{/1}:
+  offset: 5, length: 1 (covers 騅)
+----
+====
+
+
+[[annotation-entries]]
+== Annotation entries
+
+Annotation entries are the core data units that attach information to positions in the text.
+Each entry targets a specific range and classifies the annotation with a `kind`.
+
+=== Syntax
+
+The general form of an annotation entry is:
+
+[source]
+----
+target kind params [headword][value]
+target kind params [value]
+----
+
+Components:
+
+* `target` — what the annotation points to (<<_target>>)
+* `kind` — the annotation type (<<_kind>>)
+* `params` — key-value parameters specific to the kind (<<_parameters>>)
+* `[headword][value]` or `[value]` — the annotation content (<<_bracket_values>>)
+
+[[_target]]
+=== Target
+
+The target identifies what portion of the text the annotation applies to:
+
+[cols="1,1,3"]
+|===
+| Target | Semantic | Usage
+
+| `{N}`
+| Inline marker reference
+| References the range defined by `{N}`...`{/N}` in the text.
+
+| `@title`
+| Title text
+| The annotation targets the piece's title.
+
+| `@full`
+| Full text
+| The annotation targets the entire piece.
+
+| `@verse:L:C`
+| Position reference
+| Targets text block `L` at character offset `C`. Rarely used; provided for precision when no inline marker exists.
+|===
+
+[[_kind]]
+=== Kind
+
+The `kind` is an open enumeration.
+Each kind defines its own parameter rules and value format.
+The following kinds are defined by this specification:
+
+[cols="1,1,1,3"]
+|===
+| Kind | Required Params | Value | Description
+
+| `pron`
+| `type`, `lang`
+| `[reading]` or `[char][reading]`
+| Pronunciation annotation. Supports homophones, romanization systems, and phonetic notation.
+
+| `meaning`
+| —
+| `[explanation]` or `[headword][explanation]`
+| Semantic annotation — the definition or explanation of a word or phrase.
+
+| `person`
+| `ref` (recommended)
+| `[name][brief]` or `[brief]`
+| Person reference. `ref` links to `authors.yaml`.
+
+| `place`
+| `ref` (optional)
+| `[name][desc]` or `[desc]`
+| Place name annotation. `ref` links to `places.yaml`.
+
+| `event`
+| `ref` (optional)
+| `[name][desc]` or `[desc]`
+| Historical event annotation. `ref` links to `events.yaml`.
+
+| `date`
+| `dynasty`, `era`, `year`, `iso` (all optional)
+| `[text][desc]`
+| Date reference with optional machine-readable parameters.
+
+| `allusion`
+| `source` (optional)
+| `[quote][explanation]`
+| Literary allusion. `source` indicates the origin text.
+
+| `commentary`
+| —
+| `[text]`
+| Traditional commentary (古注). Free-form text from a historical commentator.
+
+| `translation`
+| —
+| `[text]`
+| Modern translation or transliteration.
+
+| `collation`
+| `source` (recommended)
+| `[variant_text][note]` or `[note]`
+| Textual criticism (校勘). Records variant readings (異文) across editions. `source` identifies the edition or manuscript.
+
+| `variant`
+| `action` (optional)
+| `[original][emended]` or `[reading][note]`
+| Textual variant or emendation. `action` indicates the type: `emend` (改字), `note` (存疑), `parallel` (並存).
+
+| `see-also`
+| `ref` (optional)
+| `[description]`
+| Cross-reference to another piece or external text. `ref` links to the target piece or registry entry.
+|===
+
+Implementations *may* define additional kinds.
+Unknown kinds *shall* be preserved by parsers and passed through unchanged.
+
+[[_parameters]]
+=== Parameters
+
+Parameters are `key:value` pairs separated by spaces, positioned after the `kind` and before the bracket values.
+
+[source]
+----
+{3} pron type:hom lang:yue [錐]
+{5} person ref:A020 [皋陶][舜帝理官]
+{7} date dynasty:唐 era:開元 year:15 iso:727 [開元十五年]
+{4} allusion source:詩經·采薇 [昔我往矣][出自《詩經·小雅·采薇》]
+----
+
+==== Pronunciation parameters
+
+[cols="1,1,3"]
+|===
+| Parameter | Values | Description
+
+| `type`
+| `hom` \| `jyut` \| `pinyin` \| `bopomofo` \| `fanqie`
+| Pronunciation system type
+
+| `lang`
+| `yue` \| `cmn`
+| Language variant (ISO 639-5 codes)
+|===
+
+==== Fanqie (反切)
+
+The `fanqie` pronunciation type represents the traditional Chinese phonetic notation system using two characters to indicate the initial (聲母) and final (韻母) of a syllable.
+
+[source]
+----
+{5} pron type:fanqie lang:cmn [德紅切]
+{8} pron type:fanqie lang:cmn [房六切]
+----
+
+The value `[XY切]` means: take the initial of character X and the final-plus-tone of character Y to reconstruct the pronunciation.
+|===
+
+==== Entity reference parameters
+
+The `ref` parameter is used by `person`, `place`, and `event` kinds to link to registry entries (see <<registries>>).
+
+[[_bracket_values]]
+=== Bracket values
+
+Bracket values carry the actual annotation content:
+
+[cols="1,1"]
+|===
+| Form | Semantic
+
+| `[value]`
+| Single value. Headword defaults to the text matched by the inline marker range.
+
+| `[headword][value]`
+| Two values. Headword is the word being explained (may differ from the full marker range text).
+|===
+
+=== Multi-line values
+
+When the value spans multiple lines, it begins with `[` on the annotation line and ends with `]` alone on its own line:
+
+[source]
+----
+{2} meaning [奈何][
+「奈何」意為「怎麼辦」。
+全句即「把你怎麼辦呢」。
+
+表達了項羽對虞姬的深情與無奈。
+]
+----
+
+Multi-line values may contain any characters, blank lines, and paragraphs.
+The closing `]` *shall* appear alone on a line with no preceding or following non-whitespace characters.
+
+=== Complete examples
+
+[source]
+----
+## 注釋
+
+{1} pron type:hom lang:yue [錐]
+{1} pron type:jyut lang:yue [zeoi1]
+{1} pron type:pinyin lang:cmn [zhuī]
+{1} meaning [騅][項羽的馬名]
+
+{2} meaning [奈何][
+「奈何」意為「怎麼辦」。
+全句即「把你怎麼辦呢」。
+]
+
+{3} person ref:A020 [皋陶][舜帝時代理官，中國司法鼻祖]
+
+{4} place ref:P001 [垓下][今安徽省靈璧縣東南]
+
+{5} date dynasty:唐 era:開元 year:15 iso:727 [開元十五年]
+
+{6} allusion source:詩經·采薇 [昔我往矣][
+出自《詩經·小雅·采薇》。
+原句為「昔我往矣，楊柳依依」。
+]
+
+{7} @title pron type:hom lang:yue [垓][該]
+{8} @full meaning [全詩以「兮」字貫穿四句，反覆詠嘆。]
+----
+
+
+[[annotation-sections]]
+== Annotation sections
+
+=== Section structure
+
+A CHAM file may contain multiple annotation sections, each introduced by a `##` (Markdown level-2 heading).
+Each section represents a distinct annotation layer.
+
+All sections in a file share the same marker table — inline marker IDs are file-scoped, not section-scoped.
+
+[source]
+----
+## 注釋
+( modern annotations )
+
+## 王弼註
+@contributor: A010
+@role: annotator
+@dynasty: 三國（魏）
+@nature: commentary
+( Wang Bi's annotations )
+
+## 白話譯文
+@contributor: A050
+@role: translator
+@nature: translation
+( translation entries )
+----
+
+=== Section metadata
+
+Metadata lines follow the section heading, using the `@key:value` syntax.
+They appear immediately after the `##` heading and continue until the first non-`@` line.
+
+[cols="1,3"]
+|===
+| Key | Description
+
+| `@contributor`
+| Contributor ID (references `authors.yaml`)
+
+| `@role`
+| Role: `annotator` \| `translator` \| `editor`
+
+| `@dynasty`
+| Dynasty of the contributor
+
+| `@era`
+| Era name (年號)
+
+| `@era_year`
+| Year within the era
+
+| `@iso`
+| ISO/CE year
+
+| `@nature`
+| Nature: `annotation` \| `commentary` \| `translation` \| `exegesis` \| `notes`
+|===
+
+=== Commentary types
+
+The classical Chinese scholarly tradition has a rich taxonomy of commentary types.
+The `@nature` field *may* use the following values to indicate the specific type of scholarly commentary:
+
+[cols="1,1,3"]
+|===
+| Value | Chinese | Description
+
+| `zhuan`
+| 傳
+| Early exegesis that transmits and explains the classic (e.g., 左傳, 公羊傳)
+
+| `gu`
+| 故/詁
+| Glosses explaining archaic words (e.g., 毛詩故訓傳)
+
+| `zhu`
+| 注
+| Direct annotation of the text (e.g., 鄭玄注, 何晏注)
+
+| `zhangju`
+| 章句
+| Chapter-and-verse commentary with parsing and explanation
+
+| `jian`
+| 箋
+| Supplementary notes that correct and expand on an earlier commentary (e.g., 鄭箋 on 毛傳)
+
+| `jijie`
+| 集解
+| Collected explanations from multiple commentators (e.g., 何晏《論語集解》)
+
+| `jizhu`
+| 集注
+| Collected annotations (e.g., 朱熹《四書集注》)
+
+| `shu`
+| 疏
+| Sub-commentary that explicates both the text and earlier annotations (e.g., 孔穎達《五經正義》)
+
+| `zhengyi`
+| 正義
+| Official sub-commentary commissioned by the state (functionally equivalent to `shu`)
+
+| `yinyi`
+| 音義
+| Pronunciation and meaning notes (e.g., 陸德明《經典釋文》)
+
+| `kaozheng`
+| 考證
+| Qing dynasty evidential scholarship
+
+| `pingdian`
+| 評點
+| Literary criticism with commentary and evaluation
+|===
+
+The hierarchy of the classical commentary tradition follows:
+
+```
+          Text（經文/原文）
+         /       \
+       zhuan      gu（傳/詁）
+         |
+        zhu（注）
+       /    \
+     jian   jijie（箋/集解）
+       |
+      shu/zhengyi（疏/正義）
+       |
+     kaozheng（考證）
+```
+
+=== Default section
+
+The `## 注釋` section is the default annotation section.
+It *may* omit all metadata (defaulting to `nature: annotation`).
+All other sections *should* include at minimum `@contributor` and `@nature`.
+
+=== Section semantics
+
+Annotation sections provide a way to organize annotations by source within a single file.
+They are distinct from multi-file annotation layers (<<multi-file>>), which use separate files.
+Both mechanisms use the same marker table and can coexist.
+
+
+[[multi-file]]
+== Multi-file relationships
+
+Complex texts with multiple annotation layers (e.g., classical commentaries from different traditions) can distribute annotations across multiple files, all sharing a common marker table.
+
+=== Main file
+
+The main file is identified by the absence of a `base` field in its frontmatter. It:
+
+* Contains the text content with inline markers
+* May contain its own annotation entries
+* Defines the marker table used by all subordinate files in the same piece folder
+
+=== Subordinate file
+
+A subordinate file is identified by the presence of a `base` field in its frontmatter. It:
+
+* Does *not* contain text content or inline markers
+* Contains only annotation entries that reference the main file's marker IDs
+* Has its own contributor, date, and nature metadata
+
+=== Merge rules
+
+When processing a piece folder, a parser *shall*:
+
+. Load the main file and build the marker table (marker ID → text block + offset + length)
+. Load all other `*.cham.md` files in the same directory that contain a `base` field
+. For each subordinate file, resolve its annotation entries against the main file's marker table
+. Merge all annotations. Section names *shall not* be duplicated across files
+
+=== Usage patterns
+
+==== Single-file mode
+
+For simple texts (individual poems, short prose), all annotations reside in `text.cham.md` using annotation sections to separate layers.
+This is the simplest mode and requires only one file.
+
+==== Multi-file mode
+
+For complex texts (classical works with multiple commentaries), each annotation layer is stored in a separate subordinate file.
+This provides clear attribution and enables independent editing of each layer.
+
+[source]
+----
+content/老子/01_第一章/
+  text.cham.md            # Main: text + inline markers + editor annotations
+  wangbi.cham.md          # Wang Bi's commentary (base: text.cham.md)
+  modern-trans.cham.md    # Modern translation (base: text.cham.md)
+----
+
+Both modes are fully compatible in syntax.
+The only difference is file organization.
+A single-file piece with multiple `##` sections and a multi-file piece with separate files produce equivalent structured data.
+
+
+[[textual-criticism]]
+== Textual criticism
+
+Classical Chinese texts exist in multiple editions with variant readings.
+CHAM provides dedicated annotation kinds for recording textual variants and collation notes.
+
+=== Collation entries
+
+The `collation` kind records variant readings (異文) found in different editions or manuscripts of the same text.
+
+[source]
+----
+{3} collation source:四庫全書本 [作「道可」]
+{3} collation source:帛書甲本 [作「道可道也」]
+{3} collation source:河上公本 [作「道可道，非常道」]
+----
+
+A collation entry *should* include a `source` parameter identifying the edition.
+
+=== Variant entries
+
+The `variant` kind records emendations and textual decisions.
+
+[source]
+----
+{5} variant action:emend [「水」][原文作「水」，據考證當作「冰」]
+{8} variant action:note [此處各本異文甚多，今從通行本]
+----
+
+[cols="1,3"]
+|===
+| Action | Description
+
+| `emend`
+| Emendation (改字) — the text has been corrected from a different reading
+
+| `note`
+| Note (存疑) — variant readings are noted but no correction is made
+
+| `parallel`
+| Parallel (並存) — multiple readings are presented together
+|===
+
+
+[[annotation-layers]]
+== Annotation layers
+
+CHAM uses a three-layer annotation architecture to balance global consistency with per-text precision.
+
+=== Three-layer architecture
+
+[cols="1,1,1,3"]
+|===
+| Layer | Source | Scope | Override rule
+
+| 1. Global lexicon
+| `data/lexicon.yaml`
+| All texts
+| Weakest — overridden by layers 2 and 3
+
+| 2. Main file inline
+| `text.cham.md` annotation entries
+| Single piece
+| Overrides layer 1
+
+| 3. Subordinate file
+| `*.cham.md` subordinate files
+| Single piece
+| Overrides layer 1
+|===
+
+=== Override rules
+
+At the same position in the text:
+
+* Inline annotations (layers 2–3) override the global lexicon (layer 1)
+* Different `kind` values do *not* override each other — a `pron` and a `meaning` annotation at the same position coexist
+* Same `kind` at the same position: the more specific source takes precedence
+
+=== Global lexicon format
+
+The global lexicon (`data/lexicon.yaml`) provides pronunciation data for characters and words across all texts.
+It uses the same annotation syntax as inline pronunciation entries.
+
+[source,yaml]
+----
+騅:
+  pron:
+    - type:hom lang:yue [錐]
+    - type:jyut lang:yue [zeoi1]
+    - type:pinyin lang:cmn [zhuī]
+
+行:
+  pron:
+    - type:pinyin lang:cmn [xíng]
+    - type:pinyin lang:cmn [háng]
+
+樂:
+  pron:
+    - type:hom lang:yue [落]
+    - type:jyut lang:yue [lok6]
+    - type:pinyin lang:cmn [lè]
+    - type:pinyin lang:cmn [yuè]
+----
+
+=== Multi-sound character handling
+
+The global lexicon lists all known readings for a character.
+The *first* reading for each type is the *default reading*.
+When a text uses a non-default reading, an inline `pron` annotation in the CHAM file overrides the default.
+
+Parsers *shall* apply the global lexicon as follows:
+
+. Load the lexicon from `data/lexicon.yaml`
+. Scan the clean text for characters/words matching lexicon entries
+. For each match, create a pronunciation annotation using the default reading
+. If an inline `pron` annotation exists at the same position, the inline annotation takes precedence
+
+NOTE: The global lexicon currently supports only `pron` annotations. Semantic annotations are always position-specific and must be provided inline.
+
+
+[[registries]]
+== Registries
+
+Registries are authoritative YAML files that provide reference data shared across all texts.
+They reside in the `data/` directory.
+
+=== File manifest
+
+[cols="1,1,1"]
+|===
+| File | Purpose | ID format
+
+| `lexicon.yaml`
+| Global pronunciation lexicon
+| Character/word as key
+
+| `authors.yaml`
+| People registry (authors, annotators, translators)
+| `A` + 3 digits (e.g., `A001`)
+
+| `dynasties.yaml`
+| Dynasty registry
+| Dynasty name as key
+
+| `eras.yaml`
+| Era table (652 entries from Chinese national standard)
+| Sequential entries
+
+| `sexagenary.yaml`
+| Sexagenary cycle reference
+| 60 cycle names as keys
+
+| `places.yaml`
+| Place name registry
+| `P` + 3 digits (e.g., `P001`)
+
+| `events.yaml`
+| Historical event registry
+| `E` + digits (e.g., `E001`)
+|===
+
+=== authors.yaml
+
+The authors registry contains all historical figures referenced in the corpus — not limited to authors.
+Commentators, translators, and editors are also included.
+
+[source,yaml]
+----
+A001:
+  name: 項羽
+  dynasty: 秦末
+  bio: 項羽（前232—前202），名籍，字羽，下相人……
+
+A010:
+  name: 王弼
+  dynasty: 三國（魏）
+  bio: 王弼（226—249），字輔嗣，山陽高平人……
+----
+
+ID allocation rules:
+
+* IDs are permanent — once assigned, they *shall not* be changed or reused
+* The `name` field *shall* be in Chinese
+* The `dynasty` field *should* match a key in `dynasties.yaml`
+* The `bio` field is optional free text
+
+=== places.yaml
+
+[source,yaml]
+----
+P001:
+  name: 垓下
+  modern: 今安徽省靈璧縣東南
+  geo: [33.28, 117.55]    # optional: latitude, longitude
+----
+
+=== events.yaml
+
+[source,yaml]
+----
+E001:
+  name: 垓下之戰
+  date: -202
+  description: 楚漢戰爭最後決戰
+----
+
+=== dynasties.yaml
+
+[source,yaml]
+----
+秦:
+  code: QIN
+  start: -221
+  end: -207
+西漢:
+  code: XHAN
+  start: -206
+  end: 8
+唐:
+  code: TANG
+  start: 618
+  end: 907
+----
+
+=== eras.yaml
+
+The era registry contains 652 entries derived from the Chinese national standard GB/T XXXXX Part 2.
+Each entry records:
+
+[source,yaml]
+----
+- dynasty: 漢
+  dynasty_code: HAN
+  ruler: 高祖
+  ruler_code: GZ
+  era: null              # null for pre-era-name periods
+  era_code: null
+  year: 1
+  sexagenary: 乙未
+  iso: -206
+----
+
+=== sexagenary.yaml
+
+[source,yaml]
+----
+stems: [甲, 乙, 丙, 丁, 戊, 己, 庚, 辛, 壬, 癸]
+branches: [子, 醜, 寅, 卯, 辰, 巳, 午, 未, 申, 酉, 戌, 亥]
+甲子: 1
+乙丑: 2
+# ... through 癸亥: 60
+----
+
+=== Date encoding
+
+CHAM supports four Chinese historical date encoding types based on the national standard `h-CN.{type}...` system:
+
+[cols="1,1,2"]
+|===
+| Type | System | Format
+
+| 1
+| Ruler regnal year (王公即位年次)
+| `h-CN.1.{dynasty}.{ruler}.{year}`
+
+| 2
+| Era name year (年號紀年)
+| `h-CN.2.{dynasty}.{era}.{year}`
+
+| 3
+| Republic of China year (中華民國紀年)
+| `h-CN.3.{year}`
+
+| 4
+| Sexagenary cycle (天干地支紀年)
+| `h-CN.4.{cycle}`
+|===
+
+
+[[pipeline]]
+== Processing pipeline
+
+=== Overview
+
+A CHAM processing pipeline converts source files (CHAM documents + registries) into structured output suitable for consumption by front-end applications, databases, or other tools.
+
+[source]
+----
+data/lexicon.yaml ─────────┐
+                           │
+content/                   │
+  NNN_標題/ (pieces) ──────┤
+    text.cham.md ──────────┤
+    *.cham.md (sub files) ─┤
+    *.md (prose) ──────────┤──→ CHAM Parser ──→ Merge ──→ JSON
+  書籍/                    │                        │
+    book.yaml ─────────────┤                        ↓
+    NNN_篇章/ ─────────────┤                  cham.json
+      text.cham.md ────────┤                  text.json
+      *.cham.md ───────────┤                  authors.json
+      *.md ────────────────┘                  metadata.json
+
+data/authors.yaml ─────────┤
+data/places.yaml ──────────┤
+data/events.yaml ──────────┘
+----
+
+=== Parse steps
+
+A conforming parser *shall* execute the following steps:
+
+. *Load global lexicon* — parse `data/lexicon.yaml`
+. *Scan content directory* — recursively traverse `content/`:
+  ** Directory containing `text.cham.md` → piece folder
+  ** Directory containing `book.yaml` → book folder, recurse into subdirectories
+. *Load book metadata* — parse `book.yaml` if present, establishing the inheritance context
+. *Load main file* (CHAM file without `base` field):
+  .. Parse YAML frontmatter, merging inherited fields from `book.yaml`
+  .. Extract text blocks using blank-line semantics (<<text-blocks>>)
+  .. Parse inline markers `{N}`/`{/N}` → build marker table
+  .. Strip markers to produce clean text
+. *Load subordinate files* (CHAM files with `base` field):
+  .. Parse YAML frontmatter (including `base` reference)
+  .. Parse annotation entries referencing the main file's marker table
+. *Load plain Markdown files* — parse auxiliary content (biographies, background, etc.)
+. *Apply global lexicon*:
+  .. Scan clean text for characters/words matching lexicon entries
+  .. Create pronunciation annotation instances for each match
+  .. If an inline `pron` exists at the same position, the inline annotation takes precedence
+. *Merge and output* — produce structured JSON output
+
+=== Output formats
+
+The pipeline *shall* produce the following outputs:
+
+[cols="1,3"]
+|===
+| File | Description
+
+| `cham.json`
+| Complete CHAM structured data — pieces, annotations, marker tables. Preserves the full semantic model.
+
+| `text.json`
+| Flat format optimized for front-end consumption. Replaces genre-specific formats (e.g., `poems.json`).
+
+| `authors.json`
+| People registry in JSON format, derived from `authors.yaml`.
+
+| `metadata.json`
+| Book-level metadata, merged from all `book.yaml` files.
+|===
+
+=== Error handling
+
+Parsers *should* produce informative error messages including:
+
+* File path and line number where the error occurred
+* The specific syntax rule that was violated
+* A suggestion for fixing the error when possible
+
+For non-fatal issues (e.g., a subordinate file referencing a non-existent marker ID), parsers *should* emit warnings and skip the affected annotation rather than failing entirely.
+
+
+[[round-trip]]
+== Round-trip equivalence
+
+=== Guarantees
+
+A CHAM document that is parsed into structured data and then serialized back to CHAM format *shall* produce output that is semantically equivalent to the input.
+That is, parsing the serialized output *shall* yield the same structured data as parsing the original input.
+
+Specifically, the following *shall* be preserved through a round trip:
+
+* All annotation entries: `kind`, `params`, `headword`, `value`
+* Inline marker positions: text block index, character offset, and length
+* Frontmatter field values
+* Section metadata (`@key:value` entries)
+* The plain text content (after stripping markers)
+
+=== Non-guarantees
+
+The following *may* change through a round trip:
+
+* *Whitespace quantity* — the number of blank lines between sections, the indentation of YAML
+* *Field order* — the order of frontmatter fields or annotation entry parameters
+* *YAML quoting style* — the choice of single vs. double quotes vs. no quotes in frontmatter
+* *Comments* — inline comments in YAML frontmatter or in the text body are not preserved
+
+=== Equivalence rules
+
+Two CHAM documents are considered *semantically equivalent* if, after parsing both into structured data, the following conditions hold:
+
+. All annotation entries have matching `kind`, `params`, `headword`, and `value`
+. All inline markers map to the same text block, character offset, and length
+. All frontmatter fields have matching values
+. All section metadata entries match
+. The clean text (with markers removed) is identical
+
+
+[[examples]]
+[appendix]
+== Complete examples
+
+=== Poetry — single-file mode
+
+The following example demonstrates a complete CHAM file for a poem (垓下歌) using single-file mode.
+All content — text, markers, and annotations — is in one file.
+
+[source]
+----
+---
+id: 1
+title: 垓下歌
+contributors:
+  - ref: A001
+    role: author
+date:
+  dynasty: 秦末
+  circa: true
+genre: poetry
+---
+
+力拔山兮氣蓋世。
+
+時不利兮{1}騅{/1}不逝。
+
+{1}騅{/1}不逝兮可奈何！
+
+
+虞兮虞兮{2}奈若何{/2}！
+
+## 注釋
+
+{1} meaning [騅][項羽的馬名]
+
+{2} meaning [奈何][
+「奈何」意為「怎麼辦」。
+全句即「把你怎麼辦呢」。
+
+表達了項羽對虞姬的深情與無奈。
+]
+
+{3} @title pron type:hom lang:yue [垓][該]
+
+{4} @full meaning [
+全詩以「兮」字貫穿四句，反覆詠嘆。
+首句寫英雄氣概，末句寫兒女深情。
+]
+----
+
+NOTE: The pronunciation of 騅 is provided by the global lexicon (`lexicon.yaml`), so it is not repeated in the inline annotations.
+
+=== Book — multi-file mode
+
+The following example demonstrates a multi-chapter book (帛書老子 甲本) with multiple annotation layers stored in separate files.
+
+==== Book metadata
+
+[source]
+----
+# File: content/老子/book.yaml
+id: laozi-boomian-a
+title: 帛書老子 甲本
+title-en: Book of Laozi on Silk, Version A
+contributors:
+  - ref: Laozi
+    role: author
+date:
+  dynasty: 周
+  circa: true
+genre: prose
+----
+
+==== Main file
+
+[source]
+----
+# File: content/老子/01_第一章/text.cham.md
+---
+id: 1
+title: 第一章
+---
+
+{1}道{/1}可道，非常{2}道{/2}。
+{3}名{/3}可名，非常{4}名{/4}。
+
+{5}無名{/5}，天地之始；
+{6}有名{/6}，萬物之母。
+
+故常{7}無欲{/7}，以觀其{8}妙{/8}；
+常{9}有欲{/9}，以觀其{10}徼{/10}。
+
+此兩者同出而異名，同謂之{11}玄{/11}。
+玄之又玄，眾妙之門。
+
+## 注釋
+
+{1} meaning [道][
+道，宇宙的本源和根本規律。
+第一個「道」指可以用語言描述的道。
+]
+
+{5} meaning [無名][
+沒有具體名稱的狀態，指天地形成之前的混沌。
+]
+
+{11} meaning [玄][深奧、微妙。指道的深不可測。]
+----
+
+NOTE: The frontmatter omits `contributors`, `date`, and `genre` because they are inherited from the parent `book.yaml`.
+
+==== Subordinate file — commentary
+
+[source]
+----
+# File: content/老子/01_第一章/wangbi.cham.md
+---
+base: text.cham.md
+contributor: A010
+role: annotator
+dynasty: 三國（魏）
+nature: commentary
+---
+
+{1} commentary [可道之道，可名之名，指事造形。非其常也。故不可道，不可名也。]
+
+{5} commentary [凡物皆有始。始，本也。謂道為無，故能生萬物。]
+
+{11} commentary [玄者，冥也。默然無有也。始，母之所出也。]
+----
+
+==== Subordinate file — translation
+
+[source]
+----
+# File: content/老子/01_第一章/modern-trans.cham.md
+---
+base: text.cham.md
+contributor: A050
+role: translator
+nature: translation
+---
+
+{1} translation [可以說出來的道，就不是永恆不變的道。]
+
+{3} translation [可以叫出來的名字，就不是永恆不變的名字。]
+
+{5} translation [
+「無名」是天地的開端；
+「有名」是萬物的根本。
+]
+
+{11} translation [
+此兩者同出一源而名稱不同，都可稱之為「玄」。
+玄之又玄，是一切奧妙的門徑。
+]
+----
+
+=== Directory layout
+
+[source]
+----
+project/
+  data/
+    lexicon.yaml
+    authors.yaml
+    dynasties.yaml
+    eras.yaml
+    sexagenary.yaml
+    places.yaml
+    events.yaml
+  content/
+    001_垓下歌/
+      text.cham.md
+      author-brief.md
+      background.md
+    老子/
+      book.yaml
+      01_第一章/
+        text.cham.md
+        wangbi.cham.md
+        modern-trans.cham.md
+      02_第二章/
+        text.cham.md
+        wangbi.cham.md
+----
