@@ -42,9 +42,9 @@ The target identifies what portion of the text the annotation applies to:
 | Full text
 | The annotation targets the entire piece.
 
-| `@verse:L:C`
-| Position reference
-| Targets text block `L` at character offset `C`. Rarely used; provided for precision when no inline marker exists.
+| `@verse:L:N[-M]`
+| Position range reference
+| Targets text block `L`. `N` is the start character offset (zero-based). `M` is the exclusive end offset; if omitted, defaults to `N+1` (single character). Used when no inline marker exists at the desired boundary, or when a commentator's phrase boundaries differ from the primary text's marker segmentation.
 |===
 
 [[_kind]]
@@ -117,6 +117,16 @@ The following kinds are defined by this specification:
 | `ref` (optional)
 | `[description]`
 | Cross-reference to another piece or external text. `ref` links to the target piece or registry entry.
+
+| `speaker`
+| `ref` (optional), `role` (optional)
+| `[name]`
+| Speaker attribution in dialogic texts. `ref` links to `authors.yaml`. `role`: `emperor` \| `official` \| `scholar` \| `narrator` \| `character`.
+
+| `skqs-variant`
+| `image` (optional), `unicode` (optional)
+| `[character]`
+| Variant character in 四庫全書 editions. `image` is path to character image; `unicode` is codepoint (e.g., `U+8F38`).
 |===
 
 Implementations *may* define additional kinds.
@@ -161,7 +171,6 @@ The `fanqie` pronunciation type represents the traditional Chinese phonetic nota
 ----
 
 The value `[XY切]` means: take the initial of character X and the final-plus-tone of character Y to reconstruct the pronunciation.
-|===
 
 ==== Entity reference parameters
 
@@ -229,5 +238,8 @@ The closing `]` *shall* appear alone on a line with no preceding or following no
 
 {7} @title pron type:hom lang:yue [垓][該]
 {8} @full meaning [全詩以「兮」字貫穿四句，反覆詠嘆。]
+
+@verse:0:3 meaning [騅][項羽的馬名]
+@verse:0:5-8 commentary [此處以馬喻人，表達英雄末路的悲涼。]
 ----
 

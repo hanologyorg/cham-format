@@ -1,0 +1,117 @@
+[[multi-part]]
+== Multi-part pieces
+
+Some texts are editorial compilations of excerpts from different chapters of a larger work.
+A multi-part piece distributes each excerpt into its own **part file**, while the main file retains piece-level metadata.
+
+=== When to use
+
+A multi-part piece is appropriate when:
+
+* The piece consists of excerpts from *different* base texts or different chapters of the same work
+* Each excerpt has its own set of annotations that should be displayed independently
+* The excerpts are thematically grouped (e.g., 論仁, 論孝, 論君子)
+
+A single-part piece (the default) is sufficient when the text is a single continuous work.
+
+=== Part file discovery
+
+A part file is identified by both of the following:
+
+* Filename matching `part-*.cham.md` in the piece directory
+* YAML frontmatter containing a `part` field (positive integer)
+
+The parser *shall* scan the piece directory for matching files, parse each one, and sort by `part` number.
+
+=== Part file frontmatter
+
+A part file *shall* include:
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `part`
+| required
+| Part number (positive integer). Unique within the piece folder. Determines display order.
+
+| `group`
+| optional
+| Group label. Parts sharing the same `group` value are displayed together (e.g., 論仁, 論孝, 論君子).
+
+| `title`
+| optional
+| Sub-title for this part. If omitted, the part has no visible title beyond its number.
+
+| `source`
+| optional
+| Base text provenance. Same structure as piece-level `source` (see <<_source_fields>>).
+|===
+
+[source,yaml]
+----
+part: 1
+group: 論仁
+source:
+  textRef: lunyu
+  relation: excerpt
+  range:
+    chapter: 里仁第四
+----
+
+=== Part file content
+
+A part file follows the same structure as a main CHAM file:
+
+* Text blocks with inline markers (`{N}` / `{/N}`)
+* One or more annotation sections (`## 注釋`, etc.)
+
+Marker IDs are *scoped to the part file*.
+Each part file has its own independent marker namespace starting from 1.
+This means two parts may both use `{1}...{/1}` without conflict.
+
+=== Main file
+
+For a multi-part piece, the main `text.cham.md`:
+
+* Contains frontmatter with piece-level metadata (`id`, `title`, `contributors`, `date`, `genre`)
+* May have an empty text body (no text blocks, no annotation sections)
+* Prose files (`background.md`, `analysis.md`, etc.) remain at the piece level
+
+The presence of part files does not prevent the main file from having its own text content.
+If both exist, the main file's text is rendered first, followed by the parts.
+
+=== Relationship to other mechanisms
+
+[cols="1,3"]
+|===
+| Mechanism | Relationship to multi-part
+
+| Subordinate files (`base:` field)
+| Subordinate files share the *main file's* marker table. Part files have their *own* marker table. Both mechanisms may coexist: a main file can have subordinate annotation layers, and each part can have its own subordinate layers.
+
+| Annotation sections (`## Heading`)
+| Work identically within a part file. Annotation sections within a part are scoped to that part's markers.
+
+| Book inheritance
+| Part files inherit `contributors`, `date`, `genre` from the nearest ancestor `book.yaml`, same as the main file.
+|===
+
+=== File layout example
+
+[source]
+----
+content/
+  nss/
+    book.yaml
+    01_論仁、論孝、論君子/
+      text.cham.md          # Main: piece metadata only
+      part-01.cham.md       # Part 1: 論仁 excerpt 1 (里仁第四)
+      part-02.cham.md       # Part 2: 論仁 excerpt 2 (里仁第四)
+      part-03.cham.md       # Part 3: 論仁 excerpt 3 (顏淵第十二)
+      part-04.cham.md       # Part 4: 論仁 excerpt 4 (衞靈公第十五)
+      part-05.cham.md       # Part 5: 論孝 excerpt 1 (為政第二)
+      ...
+      background.md
+      analysis.md
+----

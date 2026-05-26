@@ -1,0 +1,134 @@
+[[cross-references]]
+== Cross-piece and cross-work references
+
+=== Structured reference syntax
+
+Annotation entries that reference other texts use the `ref` parameter with a structured syntax:
+
+[cols="1,3"]
+|===
+| Syntax | Description
+
+| `#N`
+| Local piece reference — piece `N` in the same book
+
+| `#N@B:O-E`
+| Local piece with text location — piece `N`, block `B`, chars `O` to `E`
+
+| `work-id`
+| Work reference — resolves against work registry
+
+| `work-id/path`
+| Work with hierarchy label — navigates within the work
+
+| `ctext:ID`
+| External ctext.org reference
+|===
+
+=== Reference resolution
+
+Parsers *shall* resolve references as follows:
+
+. *Local refs* (`#N`): resolve against piece IDs in the same book directory
+. *Work refs*: resolve against the work registry (`data/works.yaml`)
+. *Text locations*: resolve against the target piece's text block index
+
+Parsers *should* emit warnings for unresolvable references.
+
+=== Annotation kinds using refs
+
+The following annotation kinds use the `ref` parameter:
+
+[cols="1,1,3"]
+|===
+| Kind | Ref type | Description
+
+| `see-also`
+| `ref`
+| Cross-reference to another piece or work
+
+| `allusion`
+| `sourceRef`
+| Source text for a literary allusion (new parameter)
+
+| `speaker`
+| `ref`
+| Speaker person reference (links to authors registry)
+|===
+
+=== Speaker annotations
+
+The `speaker` annotation kind marks speaker attribution in dialogic texts.
+
+[cols="1,1,3"]
+|===
+| Parameter | Status | Description
+
+| `ref`
+| optional
+| Person reference (links to `authors.yaml`)
+
+| `role`
+| optional
+| Speaker's social role: `emperor` \| `official` \| `scholar` \| `narrator` \| `character`
+|===
+
+[source]
+----
+{1}大夫曰{/1} 惟始元六年有詔書使丞相御史與{2}{/1}所舉賢良文學語問民間所疾苦{/2}
+
+{3}文學對曰{/3} 竊聞治人之道坊淫佚之原...
+
+## 注釋
+
+{1} speaker role:official [大夫]
+{3} speaker role:scholar [文學]
+----
+
+A `speaker` annotation *shall* target a marker range.
+The bracket value contains the speaker's name or title.
+
+=== SKQS variant annotations
+
+The `skqs-variant` annotation kind marks variant characters in 四庫全書 editions.
+
+[cols="1,1,3"]
+|===
+| Parameter | Status | Description
+
+| `image`
+| optional
+| Path to variant character image
+
+| `unicode`
+| optional
+| Unicode codepoint (e.g., `U+8F38`)
+|===
+
+[source]
+----
+{1} skqs-variant image:skqs/yantielun/004-01.png unicode:U+8F38 [譖]
+----
+
+=== Examples
+
+==== Cross-reference within same book
+
+[source]
+----
+{42} see-also ref:#3 [參見卷一總論]
+----
+
+==== Cross-reference to another work
+
+[source]
+----
+{35} allusion source:論語 sourceRef:lunyu/雍也 [博學於文][出自《論語·雍也》]
+----
+
+==== Cross-reference with text location
+
+[source]
+----
+{5} see-also ref:#4@0:10-25 [cf. 夲議第一, 大夫開場白]
+----

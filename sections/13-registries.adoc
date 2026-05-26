@@ -37,6 +37,10 @@ They reside in the `data/` directory.
 | `events.yaml`
 | Historical event registry
 | `E` + digits (e.g., `E001`)
+
+| `works.yaml`
+| Work registry (canonical texts and collections)
+| Work ID (e.g., `lunyu`, `yantielun`)
 |===
 
 === authors.yaml
@@ -83,6 +87,26 @@ E001:
   date: -202
   description: 楚漢戰爭最後決戰
 ----
+
+=== works.yaml
+
+The works registry contains canonical texts and collections referenced across the corpus.
+
+[source,yaml]
+----
+lunyu:
+  title: 論語
+  dynasty: 周
+  genre: prose
+
+yantielun:
+  title: 鹽鐵論
+  dynasty: 漢
+  genre: prose
+----
+
+Work IDs *should* be lowercase romanized forms (pinyin without tones).
+The organizational hierarchy of each work is declared in its `book.yaml` (see <<text-hierarchy>>).
 
 === dynasties.yaml
 

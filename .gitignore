@@ -1,5 +1,8 @@
 node_modules
 dist
 Gemfile.lock
+.bundle
+vendor
 .DS_Store
 *.html
+TODO.*/

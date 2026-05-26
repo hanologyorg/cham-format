@@ -1,0 +1,233 @@
+[[text-hierarchy]]
+== Text Hierarchy
+
+Classical Chinese texts are organized in well-defined hierarchical structures.
+CHAM provides a formal mechanism for declaring and encoding these hierarchies.
+
+=== Hierarchy level names
+
+The following hierarchy level names are defined:
+
+[cols="1,1,3"]
+|===
+| Level | Chinese | Description
+
+| `部`
+| 部
+| Division (e.g., 經部, 史部 in the 四部分類 system)
+
+| `卷`
+| 卷
+| Roll/fascicle — physical manuscript division
+
+| `篇`
+| 篇
+| Essay/treatise — thematic unit
+
+| `章`
+| 章
+| Chapter — structural unit
+
+| `節`
+| 節
+| Subsection
+
+| `段`
+| 段
+| Paragraph (in structural context)
+
+| `句`
+| 句
+| Sentence (in structural context)
+|===
+
+Implementations *may* define additional level names.
+Unknown level names *shall* be preserved by parsers.
+
+=== Book hierarchy declaration
+
+A `book.yaml` *may* declare the work's organizational scheme using the `hierarchy` field:
+
+[source,yaml]
+----
+id: skqs-yantielun
+title: 鹽鐵論
+hierarchy: [卷, 篇]
+genre: prose
+----
+
+The `hierarchy` field is an ordered array of level names from outermost to innermost.
+For 鹽鐵論, this declares a two-level structure: 卷 (volumes) containing 篇 (chapters).
+
+=== Piece hierarchy position
+
+A piece *may* declare its position in the work's hierarchy using the `hierarchy` field in its frontmatter:
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `level`
+| required
+| Hierarchy level name (e.g., `卷`, `篇`)
+
+| `index`
+| required
+| Ordinal position (1-based) within the parent level
+
+| `label`
+| optional
+| Display label (e.g., `夲議第一`, `卷一`)
+
+| `parent`
+| optional
+| ID of the parent piece (references the `id` field of another piece in the same book)
+|===
+
+[source,yaml]
+----
+id: 4
+title: 夲議第一
+hierarchy:
+  - level: 篇
+    index: 1
+    label: 夲議第一
+    parent: 3
+----
+
+A piece *may* occupy multiple hierarchy levels simultaneously:
+
+[source,yaml]
+----
+id: 3
+title: 鹽鐵論卷一
+hierarchy:
+  - level: 卷
+    index: 1
+    label: 卷一
+----
+
+=== Parent reference resolution
+
+When a piece declares `parent`, parsers *shall* resolve it to the piece with the matching `id` in the same book.
+If no matching piece exists, parsers *should* emit a warning.
+
+Pieces without a `parent` are top-level in the hierarchy.
+
+=== Within-piece structural sections
+
+Pieces that contain multiple sub-divisions (章, 節, etc.) *may* use `### ` headings to mark structural section boundaries within the text body.
+
+The syntax is:
+
+[source]
+----
+### LEVEL:LABEL
+----
+
+Components:
+
+* `LEVEL` — hierarchy level name (e.g., `章`, `節`)
+* `LABEL` — display label (e.g., `成均圖`, `第一章`). Optional.
+
+Both half-width `:` and full-width `：` are accepted as separators.
+The `### ` line *shall* appear on its own line, separated by blank lines from surrounding text.
+It is a structural marker — it does not become a text block.
+
+[cols="1,1,3"]
+|===
+| Field | Status | Description
+
+| `level`
+| required
+| Hierarchy level name
+
+| `label`
+| optional
+| Display label for the section
+
+| `index`
+| auto
+| 1-based ordinal, assigned sequentially by position
+|===
+
+Each text section defines a range of text blocks:
+
+* `startBlock` — index of the first text block in the section
+* `endBlock` — exclusive end index
+
+Text blocks before the first `### ` heading are unaffiliated (no `textSectionIndex`).
+
+==== Example: multi-chapter piece
+
+[source]
+----
+### 章:成均圖
+
+Text of chapter 1...
+
+More text of chapter 1.
+
+### 章:明堂
+
+Text of chapter 2...
+----
+
+==== Relationship to book hierarchy
+
+The within-piece mechanism (章 → 節 → 段 → 句) complements the cross-piece hierarchy (卷 → 篇):
+
+[cols="1,1,3"]
+|===
+| Dimension | Mechanism | Levels
+
+| Cross-piece
+| Piece frontmatter `hierarchy` field + `book.yaml` scheme
+| 卷, 篇, etc.
+
+| Within-piece
+| `### ` headings in text body
+| 章, 節, etc.
+
+| Paragraph
+| Blank-line text blocks
+| 段
+
+| Sentence
+| Punctuation in text content
+| 句
+|===
+
+=== Examples
+
+==== 鹽鐵論 (卷→篇 hierarchy)
+
+[source]
+----
+content/
+  skqs-yantielun/
+    book.yaml              # hierarchy: [卷, 篇]
+    003_鹽鐵論卷一/
+      text.cham.md          # hierarchy: [{level: 卷, index: 1}]
+    004_夲議第一/
+      text.cham.md          # hierarchy: [{level: 篇, index: 1, parent: 3}]
+    005_力耕第二/
+      text.cham.md          # hierarchy: [{level: 篇, index: 2, parent: 3}]
+    007_鹽鐵論卷二/
+      text.cham.md          # hierarchy: [{level: 卷, index: 2}]
+    008_錯幣第四/
+      text.cham.md          # hierarchy: [{level: 篇, index: 4, parent: 7}]
+----
+
+==== 老子 (flat 章 hierarchy)
+
+[source]
+----
+content/
+  laozi/
+    book.yaml              # hierarchy: [章]
+    01_第一章/
+      text.cham.md          # hierarchy: [{level: 章, index: 1}]
+    02_第二章/
+      text.cham.md          # hierarchy: [{level: 章, index: 2}]
+----

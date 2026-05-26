@@ -32,6 +32,8 @@ include::sections/09-annotation-sections.adoc[]
 
 include::sections/10-multi-file.adoc[]
 
+include::sections/18-multi-part.adoc[]
+
 include::sections/11-textual-criticism.adoc[]
 
 include::sections/12-annotation-layers.adoc[]
@@ -45,3 +47,7 @@ include::sections/15-round-trip.adoc[]
 include::sections/16-examples.adoc[]
 
 include::sections/17-quality-rules.adoc[]
+
+include::sections/19-text-hierarchy.adoc[]
+
+include::sections/20-cross-references.adoc[]

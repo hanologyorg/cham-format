@@ -2,7 +2,7 @@
 
 source 'https://rubygems.org'
 
-git 'https://github.com/metanorma/coradoc.git', branch: 'main' do
+path '../../mn/coradoc' do
   gem 'coradoc'
   gem 'coradoc-adoc'
   gem 'coradoc-html'

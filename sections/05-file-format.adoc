@@ -58,6 +58,10 @@ A main file (no `base` field) *shall* include the following frontmatter:
 | `source`
 | optional
 | Edition and provenance information. See <<_source_fields>>.
+
+| `hierarchy`
+| optional
+| Position in the work's hierarchy. Array of `{level, index, label?, parent?}`. See <<text-hierarchy>>.
 |===
 
 ==== Contributors
